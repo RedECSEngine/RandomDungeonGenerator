@@ -2,12 +2,23 @@
 import SpriteKit
 import GameplayKit
 
+enum GenerationPhase {
+    case fittingRooms
+    case roundedFittingRooms
+    case initialGraph
+    case minimumGraph
+    case hallways
+}
+
 class GameScene: SKScene {
     
     let dungeonCamera = SKCameraNode()
     var dungeonGenerator: RandomDungeonGenerator!
     
     private var lastUpdateTimeInterval: TimeInterval = 0
+    private var phase: GenerationPhase = .fittingRooms
+    private var timeInPhase: TimeInterval = 0
+    private var maxTimePerPhase: TimeInterval = 1
     
     override func didMove(to view: SKView) {
         
@@ -20,6 +31,7 @@ class GameScene: SKScene {
         
         dungeonGenerator = RandomDungeonGenerator()
         dungeonGenerator.generateRooms()
+        phase = .fittingRooms
     }
     
     override func update(_ currentTime: TimeInterval) {
@@ -27,7 +39,9 @@ class GameScene: SKScene {
         
         let delta: TimeInterval = currentTime - lastUpdateTimeInterval
         
-        guard delta > 0.05 else {
+        timeInPhase += delta
+        
+        guard delta > 0.016 else {
             return
         }
         
@@ -48,6 +62,42 @@ class GameScene: SKScene {
         boundaryShape.isAntialiased = false
         addChild(boundaryShape)
         
+        addRooms()
+        
+        switch phase {
+        
+        case .fittingRooms:
+            dungeonGenerator.applyFittingStep()
+            if dungeonGenerator.containsNoIntersectingRooms() {
+                phase = .roundedFittingRooms
+                timeInPhase = 0
+            }
+        case .roundedFittingRooms:
+            dungeonGenerator.applyFittingStep(rounded: true)
+            if dungeonGenerator.containsNoIntersectingRooms() {
+                phase = .initialGraph
+                timeInPhase = 0
+            }
+        case .initialGraph:
+            let graph = dungeonGenerator.generateGraph()
+            addGraph(graph)
+            if timeInPhase > maxTimePerPhase {
+                phase = .minimumGraph
+                timeInPhase = 0
+            }
+        case .minimumGraph:
+            let graph = dungeonGenerator.generateMinimumEdges()
+            addGraph(graph)
+            if timeInPhase > maxTimePerPhase {
+                phase = .hallways
+                timeInPhase = 0
+            }
+        case .hallways:
+            addHallways()
+        }
+    }
+    
+    func addRooms() {
         dungeonGenerator.rooms
         .forEach {
             room in
@@ -56,25 +106,24 @@ class GameScene: SKScene {
             visualShape.fillColor = .blue
             visualShape.strokeColor = .white
             visualShape.isAntialiased = false
+            visualShape.zPosition = 1
             addChild(visualShape)
             
             var containmentCircle = Circle(fittedTo: room.rect)
-            containmentCircle.radius += dungeonGenerator.minimumRoomSpacing
+            containmentCircle.radius += (dungeonGenerator.maxRoomSpacing / 2)
             
             let containmentCircleShape = SKShapeNode(circleOfRadius: CGFloat(containmentCircle.radius))
             containmentCircleShape.position = room.rect.center.cgPoint
-            containmentCircleShape.fillColor = .purple
-            containmentCircleShape.strokeColor = .clear
+            containmentCircleShape.fillColor = .clear
+            containmentCircleShape.strokeColor = .purple
             containmentCircleShape.isAntialiased = false
-            containmentCircleShape.alpha = 0.3
+            containmentCircleShape.zPosition = 0
             addChild(containmentCircleShape)
         }
-        
-        if false == dungeonGenerator.containsNoIntersectingRooms() {
-            dungeonGenerator.applyFittingStep()
-        } else {
-            let graph = dungeonGenerator.generateGraph()
-            graph.vertices
+    }
+
+    func addGraph(_ graph: AdjacencyListGraph<DungeonRoom>) {
+        graph.vertices
             .forEach {
                 vertex in
                 
@@ -91,9 +140,32 @@ class GameScene: SKScene {
                     visualShape.strokeColor = .green
                     visualShape.alpha = 0.5
                     visualShape.isAntialiased = false
+                    visualShape.zPosition = 2
                     addChild(visualShape)
                 })
+        }
+    }
+    
+    func addHallways() {
+       dungeonGenerator.generateHallways()
+        .forEach {
+            hallwayPoints in
+            
+            let path = CGMutablePath()
+            path.move(to: hallwayPoints.first!.cgPoint)
+            hallwayPoints.dropFirst().forEach {
+                point in
+                path.addLine(to: point.cgPoint)
             }
+            
+            let visualShape = SKShapeNode(path: path)
+            visualShape.fillColor = .clear
+            visualShape.strokeColor = .orange
+            visualShape.alpha = 0.5
+            visualShape.isAntialiased = false
+            visualShape.zPosition = 2
+            addChild(visualShape)
+            
         }
     }
     

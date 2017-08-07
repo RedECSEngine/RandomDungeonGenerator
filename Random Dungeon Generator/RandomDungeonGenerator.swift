@@ -10,6 +10,7 @@ class RandomDungeonGenerator {
     var minimumRoomHeight: Double = 5
     var maximumRoomHeight: Double = 14
     var minimumRoomSpacing: Double = 2
+    var maxRoomSpacing: Double = 8
     
     var initialRoomCreationCount: Int = 30
     var maximumStepsBeforeRetry: Int = 50
@@ -39,14 +40,13 @@ class RandomDungeonGenerator {
         }
     }
     
-    func applyFittingStep() {
+    func applyFittingStep(rounded: Bool = false) {
     
         if numberOfStepsTaken > maximumStepsBeforeRetry {
             generateRooms()
         }
         
         numberOfStepsTaken += 1
-        print("step:", numberOfStepsTaken)
         removeRoomsOutOfBounds()
         rooms = rooms.map {
             currentRoom in
@@ -81,12 +81,18 @@ class RandomDungeonGenerator {
             velocityX /= Double(neighborCount)
             velocityY /= Double(neighborCount)
             
-            velocityX = (velocityX / currentRoom.rect.diagonalLength)
-            velocityY = ceil(velocityY / currentRoom.rect.diagonalLength)
+            velocityX = velocityX / currentRoom.rect.diagonalLength
+            velocityY = velocityY / currentRoom.rect.diagonalLength
             
-            print("adjust position by", velocityX, velocityY)
+            var newX = currentRoom.rect.origin.x + velocityX
+            var newY = currentRoom.rect.origin.y + velocityY
             
-            let newPosition = Point(x: currentRoom.rect.origin.x + velocityX, y: currentRoom.rect.origin.y + velocityY)
+            if rounded {
+                newX = ceil(newX)
+                newY = ceil(newY)
+            }
+            
+            let newPosition = Point(x: newX, y: newY)
             let newRect = Rect(origin: newPosition, size: currentRoom.rect.size)
             return DungeonRoom(rect: newRect)
         }
@@ -134,7 +140,7 @@ class RandomDungeonGenerator {
     func generateGraph() -> AdjacencyListGraph<DungeonRoom> {
    
         let graph = AdjacencyListGraph<DungeonRoom>()
-        let connectableRoomRadius = minimumRoomSpacing
+        let connectableRoomRadius = (maxRoomSpacing / 2)
         let connectedRooms = rooms.reduce([:]) {
             connections, currentRoom -> [DungeonRoom: [DungeonRoom]] in
             
@@ -178,7 +184,38 @@ class RandomDungeonGenerator {
         }
         rooms = finalRooms
         
+        return graph
+    }
+    
+    func generateMinimumEdges() -> AdjacencyListGraph<DungeonRoom> {
+        return minimumSpanningTreeKruskal(graph: generateGraph()).tree
+    }
+    
+    func generateHallways() -> [[Point]] {
+        let edges = generateMinimumEdges().edges
+        return edges.map {
+            (edge) -> [Point] in
+            
+            let fromRoom = edge.from.data
+            let toRoom = edge.to.data
+            
+            var linePoints = [Point]()
+            let lineOrigin = fromRoom.rect.center
+            linePoints.append(lineOrigin)
+            
+            let positionDiff = toRoom.rect.center.diffOf(lineOrigin)
+            let verticalLinePoint = lineOrigin.offsetBy(Point(x: 0, y: positionDiff.y))
+            linePoints.append(verticalLinePoint)
+            
+            if toRoom.rect.intersects(line: (lineOrigin, verticalLinePoint)) {
+                return linePoints
+            }
+            
+            let horizontalLinePoint = verticalLinePoint.offsetBy(Point(x: positionDiff.x, y: 0))
+            linePoints.append(horizontalLinePoint)
+            
+            return linePoints
+        }
         
-        return minimumSpanningTreeKruskal(graph: graph).tree
     }
 }

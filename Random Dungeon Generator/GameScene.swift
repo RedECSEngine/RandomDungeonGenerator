@@ -41,7 +41,7 @@ class GameScene: SKScene {
         
         timeInPhase += delta
         
-        guard delta > 0.016 else {
+        guard delta > 0.05 else {
             return
         }
         
@@ -80,6 +80,7 @@ class GameScene: SKScene {
             }
         case .initialGraph:
             let graph = dungeonGenerator.generateGraph()
+            addCircles()
             addGraph(graph)
             if timeInPhase > maxTimePerPhase {
                 phase = .minimumGraph
@@ -108,6 +109,13 @@ class GameScene: SKScene {
             visualShape.isAntialiased = false
             visualShape.zPosition = 1
             addChild(visualShape)
+        }
+    }
+    
+    func addCircles() {
+        dungeonGenerator.rooms
+        .forEach {
+            room in
             
             var containmentCircle = Circle(fittedTo: room.rect)
             containmentCircle.radius += (dungeonGenerator.maxRoomSpacing / 2)
@@ -147,8 +155,8 @@ class GameScene: SKScene {
     }
     
     func addHallways() {
-       dungeonGenerator.generateHallways()
-        .forEach {
+        dungeonGenerator.generateHallways()
+        dungeonGenerator.hallways.forEach {
             hallwayPoints in
             
             let path = CGMutablePath()
@@ -160,8 +168,8 @@ class GameScene: SKScene {
             
             let visualShape = SKShapeNode(path: path)
             visualShape.fillColor = .clear
-            visualShape.strokeColor = .orange
-            visualShape.alpha = 0.5
+            visualShape.strokeColor = .blue
+            visualShape.lineWidth = 3
             visualShape.isAntialiased = false
             visualShape.zPosition = 2
             addChild(visualShape)

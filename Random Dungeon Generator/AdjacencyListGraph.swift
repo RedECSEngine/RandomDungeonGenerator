@@ -25,7 +25,7 @@ open class AdjacencyListGraph<T>: CustomStringConvertible where T: Hashable {
             let from = createVertex(edge.from.data)
             let to = createVertex(edge.to.data)
             
-            addDirectedEdge(from, to: to, withWeight: edge.weight)
+            addEdge(from, to: to, withWeight: edge.weight)
         }
     }
     
@@ -67,7 +67,7 @@ open class AdjacencyListGraph<T>: CustomStringConvertible where T: Hashable {
         return vertex
     }
     
-    open func addDirectedEdge(_ from: Vertex<T>, to: Vertex<T>, withWeight weight: Double) {
+    open func addEdge(_ from: Vertex<T>, to: Vertex<T>, withWeight weight: Double) {
         
         let edge = Edge(from: from, to: to, weight: weight)
         let edgeList = adjacencyList[from.index]
@@ -76,11 +76,6 @@ open class AdjacencyListGraph<T>: CustomStringConvertible where T: Hashable {
         } else {
             edgeList.edges = [edge]
         }
-    }
-    
-    open func addUndirectedEdge(_ vertices: (Vertex<T>, Vertex<T>), withWeight weight: Double) {
-        addDirectedEdge(vertices.0, to: vertices.1, withWeight: weight)
-        addDirectedEdge(vertices.1, to: vertices.0, withWeight: weight)
     }
     
     open func removeEdge(_ edge: Edge<T>) {

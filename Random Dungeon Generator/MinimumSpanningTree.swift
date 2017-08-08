@@ -17,7 +17,7 @@ func minimumSpanningTreeKruskal<T>(graph: AdjacencyListGraph<T>) -> (cost: Doubl
         let v2 = edge.to
         if false == unionFind.inSameSet(v1, and: v2) {
             cost += edge.weight
-            tree.addUndirectedEdge((v1, v2), withWeight: edge.weight)
+            tree.addEdge(v1, to: v2, withWeight: edge.weight)
             unionFind.unionSetsContaining(v1, and: v2)
         }
     }

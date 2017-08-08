@@ -27,7 +27,7 @@ extension Edge: CustomStringConvertible {
 extension Edge: Hashable {
 
   public var hashValue: Int {
-    var string = "\(from.description)\(to.description)\(weight)"
+    let string = "\(from.description)\(to.description)\(weight)"
     return string.hashValue
   }
 }

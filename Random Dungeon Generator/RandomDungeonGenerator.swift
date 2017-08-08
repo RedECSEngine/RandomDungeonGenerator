@@ -16,6 +16,7 @@ class RandomDungeonGenerator {
     var maximumStepsBeforeRetry: Int = 50
     
     var rooms: [DungeonRoom] = []
+    var hallways: [[Point]] = []
     
     fileprivate(set) var numberOfStepsTaken = 0
 
@@ -38,6 +39,7 @@ class RandomDungeonGenerator {
             let rect = Rect(origin: position, size: size)
             return DungeonRoom(rect: rect)
         }
+        hallways.removeAll()
     }
     
     func applyFittingStep(rounded: Bool = false) {
@@ -179,7 +181,7 @@ class RandomDungeonGenerator {
             connectedRooms.forEach {
                 otherRoom in
                 let otherVertex = graph.createVertex(otherRoom)
-                graph.addUndirectedEdge((currentVertex, otherVertex), withWeight: currentRoom.rect.center.distanceFrom(otherRoom.rect.center))
+                graph.addEdge(currentVertex, to: otherVertex, withWeight: currentRoom.rect.center.distanceFrom(otherRoom.rect.center))
             }
         }
         rooms = finalRooms
@@ -191,9 +193,14 @@ class RandomDungeonGenerator {
         return minimumSpanningTreeKruskal(graph: generateGraph()).tree
     }
     
-    func generateHallways() -> [[Point]] {
+    func generateHallways() {
+        
+        guard hallways.isEmpty else {
+            return
+        }
+        
         let edges = generateMinimumEdges().edges
-        return edges.map {
+        hallways = edges.map {
             (edge) -> [Point] in
             
             let fromRoom = edge.from.data
@@ -216,6 +223,6 @@ class RandomDungeonGenerator {
             
             return linePoints
         }
-        
     }
+    
 }

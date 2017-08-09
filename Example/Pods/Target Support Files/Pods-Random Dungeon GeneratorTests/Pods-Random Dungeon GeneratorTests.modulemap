@@ -1,0 +1,6 @@
+framework module Pods_Random_Dungeon_GeneratorTests {
+  umbrella header "Pods-Random Dungeon GeneratorTests-umbrella.h"
+
+  export *
+  module * { export * }
+}

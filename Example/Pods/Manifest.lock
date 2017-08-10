@@ -1,0 +1,22 @@
+PODS:
+  - BWRandomDungeonGenerator (1.0.0)
+  - Nimble (7.0.1)
+  - Quick (1.1.0)
+
+DEPENDENCIES:
+  - BWRandomDungeonGenerator (from `../`)
+  - Nimble
+  - Quick
+
+EXTERNAL SOURCES:
+  BWRandomDungeonGenerator:
+    :path: "../"
+
+SPEC CHECKSUMS:
+  BWRandomDungeonGenerator: da5438da2b1e10e6b963d6c8e3a069a9d0ad83e0
+  Nimble: 657d000e11df8aebe27cdaf9d244de7f30ed87f7
+  Quick: dafc587e21eed9f4cab3249b9f9015b0b7a7f71d
+
+PODFILE CHECKSUM: 53f606ce6c784fc409419ba37f879e2de061077f
+
+COCOAPODS: 1.2.1

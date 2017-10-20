@@ -13,7 +13,7 @@ EXTERNAL SOURCES:
     :path: "../"
 
 SPEC CHECKSUMS:
-  BWRandomDungeonGenerator: da5438da2b1e10e6b963d6c8e3a069a9d0ad83e0
+  BWRandomDungeonGenerator: 3467da3a0b7f33b3e4f8b6feb5391b528e67f691
   Nimble: 657d000e11df8aebe27cdaf9d244de7f30ed87f7
   Quick: dafc587e21eed9f4cab3249b9f9015b0b7a7f71d
 

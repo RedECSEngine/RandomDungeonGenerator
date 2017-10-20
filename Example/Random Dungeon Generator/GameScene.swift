@@ -15,12 +15,14 @@ enum GenerationPhase {
 class GameScene: SKScene {
     
     let dungeonCamera = SKCameraNode()
-    var dungeonGenerator: RandomDungeonGenerator!
+    var dungeonGenerator: DungeonGenerator!
     
     private var lastUpdateTimeInterval: TimeInterval = 0
     private var phase: GenerationPhase = .fittingRooms
     private var timeInPhase: TimeInterval = 0
     private var maxTimePerPhase: TimeInterval = 1
+    
+    private var isGenerating = false
     
     override func didMove(to view: SKView) {
         
@@ -31,13 +33,19 @@ class GameScene: SKScene {
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         super.touchesBegan(touches, with: event)
         
-        dungeonGenerator = RandomDungeonGenerator()
+        isGenerating = true
+        dungeonGenerator = DungeonGenerator()
         dungeonGenerator.generateRooms()
         phase = .fittingRooms
     }
     
     override func update(_ currentTime: TimeInterval) {
         super.update(currentTime)
+        
+        guard isGenerating else {
+            lastUpdateTimeInterval = currentTime
+            return
+        }
         
         let delta: TimeInterval = currentTime - lastUpdateTimeInterval
         
@@ -76,7 +84,7 @@ class GameScene: SKScene {
             }
         case .roundedFittingRooms:
             addRooms()
-            dungeonGenerator.applyFittingStep(rounded: true)
+            dungeonGenerator.roundRoomPositions()
             if dungeonGenerator.containsNoIntersectingRooms() {
                 phase = .initialGraph
                 timeInPhase = 0
@@ -107,6 +115,7 @@ class GameScene: SKScene {
             }
         case .grid:
            add2DGrid()
+            isGenerating = false
         }
     }
     

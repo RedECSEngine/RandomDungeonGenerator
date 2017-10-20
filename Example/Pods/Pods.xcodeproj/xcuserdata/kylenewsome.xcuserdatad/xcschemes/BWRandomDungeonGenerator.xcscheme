@@ -14,7 +14,7 @@
             buildForArchiving = "YES">
             <BuildableReference
                BuildableIdentifier = 'primary'
-               BlueprintIdentifier = '94F1CF29763AF178352E58F9CCAC1047'
+               BlueprintIdentifier = 'C3ED4671BFCF3AB1BDEB5B93FF62520C'
                BlueprintName = 'BWRandomDungeonGenerator'
                ReferencedContainer = 'container:Pods.xcodeproj'
                BuildableName = 'BWRandomDungeonGenerator.framework'>

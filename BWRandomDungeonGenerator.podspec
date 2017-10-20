@@ -6,7 +6,7 @@ Pod::Spec.new do |spec|
 	spec.authors          = { 'Kyle Newsome' => 'kyle@bitwit.ca' }
 	spec.summary          = 'A random dungeon generator written in Swift with no closed source dependencies'
 	spec.source           = { :git => 'https://github.com/bitwit/swift-random-dungeon-generator.git', :tag => '1.0.0' }
-	spec.source_files     = 'Source/**.swift'
+	spec.source_files     = 'Sources/**/**.swift'
 	spec.requires_arc     = true
 	spec.social_media_url = "https://twitter.com/kylnew"
 end

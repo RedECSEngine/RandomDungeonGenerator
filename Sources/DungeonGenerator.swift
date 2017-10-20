@@ -1,6 +1,8 @@
 import Foundation
 
-public class RandomDungeonGenerator {
+public typealias DungeonGrid = [[Int]]
+
+public class DungeonGenerator {
     
     public var dungeonSize: Size = Size(width: 64, height: 64)
     public var creationBounds: Size = Size(width: 64, height: 64)
@@ -18,6 +20,8 @@ public class RandomDungeonGenerator {
     
     public var rooms: [DungeonRoom] = []
     public var hallways: [[Rect]] = []
+    public var grid: [[Int]] = []
+    public var gridModifiers: [GridModifier] = []
     
     fileprivate(set) var numberOfStepsTaken = 0
     
@@ -26,19 +30,26 @@ public class RandomDungeonGenerator {
     }
     
     public func runCompleteGeneration() {
+        let startTime = Date()
         generateRooms()
         
         while false == containsNoIntersectingRooms() {
             applyFittingStep()
         }
         
-        applyFittingStep(rounded: true)
+        roundRoomPositions()
         
         while false == containsNoIntersectingRooms() {
-            applyFittingStep(rounded: true)
+            applyFittingStep()
+            roundRoomPositions()
         }
         
         generateHallways()
+        
+        let endTime = Date()
+        
+        let difference = endTime.timeIntervalSince(startTime)
+        print("Dungeon generated in \(difference) seconds")
     }
 
     public func generateRooms() {
@@ -63,7 +74,7 @@ public class RandomDungeonGenerator {
         hallways.removeAll()
     }
     
-    public func applyFittingStep(rounded: Bool = false) {
+    public func applyFittingStep() {
     
         if numberOfStepsTaken > maximumStepsBeforeRetry {
             generateRooms()
@@ -107,19 +118,21 @@ public class RandomDungeonGenerator {
             velocityX = velocityX / currentRoom.rect.diagonalLength
             velocityY = velocityY / currentRoom.rect.diagonalLength
             
-            var newX = currentRoom.rect.origin.x + velocityX
-            var newY = currentRoom.rect.origin.y + velocityY
-            
-            if rounded {
-                newX = ceil(newX)
-                newY = ceil(newY)
-            }
-            
+            let newX = currentRoom.rect.origin.x + velocityX
+            let newY = currentRoom.rect.origin.y + velocityY
             let newPosition = Point(x: newX, y: newY)
             let newRect = Rect(origin: newPosition, size: currentRoom.rect.size)
             return DungeonRoom(rect: newRect)
         }
-        
+    }
+    
+    public func roundRoomPositions() {
+        rooms.forEach {
+            room in
+            let newX = ceil(room.rect.origin.x)
+            let newY = ceil(room.rect.origin.y)
+            room.rect.origin = Point(x: newX, y: newY)
+        }
     }
     
     public func containsNoIntersectingRooms() -> Bool {
@@ -143,7 +156,8 @@ public class RandomDungeonGenerator {
     
     public func removeRoomsOutOfBounds() {
     
-        let dungeonRect = Rect(origin: Point(x: 0, y: 0), size: dungeonSize)
+        //inset dungeon rect to prevent rooms on edges
+        let dungeonRect = Rect(origin: Point(x: 0, y: 0), size: dungeonSize).inset(by: 1)
         rooms = rooms.filter {
             room -> Bool in
             return dungeonRect.contains(room.rect)
@@ -225,19 +239,21 @@ public class RandomDungeonGenerator {
            
             guard lineSet.count >= 2 else { return nil }
             
-            let firstLine = (lineSet[0], lineSet[1])
+            let firstLine = (lineSet[0].roundedUp(), lineSet[1].roundedUp())
             let verticalDiff = firstLine.0.diffOf(firstLine.1)
             let verticalDirection = Direction.fromPoint(verticalDiff)
             
             var rects: [Rect] = []
             
+            let roundedHalfWidth = ceil(hallwayWidth/2)
+            
             //vertical hallways are first
             if verticalDirection == .down {
-                let origin = firstLine.0.offsetBy(x: -hallwayWidth/2, y: 0)
+                let origin = firstLine.0.offsetBy(x: -roundedHalfWidth, y: 0)
                 let rect = Rect(origin: origin, size: Size(width: hallwayWidth, height: firstLine.0.distanceFrom(firstLine.1)))
                 rects.append(rect)
             } else {
-                let origin = firstLine.1.offsetBy(x: -hallwayWidth/2, y: 0)
+                let origin = firstLine.1.offsetBy(x: -roundedHalfWidth, y: 0)
                 let rect = Rect(origin: origin, size: Size(width: hallwayWidth, height: firstLine.0.distanceFrom(firstLine.1)))
                 rects.append(rect)
             }
@@ -246,17 +262,17 @@ public class RandomDungeonGenerator {
                 return rects
             }
             
-            let secondLine = (lineSet[1], lineSet[2])
+            let secondLine = (lineSet[1].roundedUp(), lineSet[2].roundedUp())
             let horizontalDiff = secondLine.0.diffOf(secondLine.1)
             let horizontalDirection = Direction.fromPoint(horizontalDiff)
             
             //horizontal comes second
             if horizontalDirection == .left {
-                let origin = secondLine.0.offsetBy(x: 0, y: -hallwayWidth / 2)
+                let origin = secondLine.0.offsetBy(x: 0, y: -roundedHalfWidth)
                 let rect = Rect(origin: origin, size: Size(width: secondLine.0.distanceFrom(secondLine.1), height: hallwayWidth))
                 rects.append(rect)
             } else {
-                let origin = secondLine.1.offsetBy(x: 0, y: -hallwayWidth / 2)
+                let origin = secondLine.1.offsetBy(x: 0, y: -roundedHalfWidth)
                 let rect = Rect(origin: origin, size: Size(width: secondLine.0.distanceFrom(secondLine.1), height: hallwayWidth))
                 rects.append(rect)
             }
@@ -295,6 +311,10 @@ public class RandomDungeonGenerator {
     
     public func to2DGrid() -> [[Int]] {
         
+        guard self.grid.isEmpty else {
+            return self.grid
+        }
+        
         let row: [Int] = Array(repeating: 0, count: Int(dungeonSize.width))
         var grid: [[Int]] = Array(repeating: row, count: Int(dungeonSize.height))
         
@@ -315,7 +335,14 @@ public class RandomDungeonGenerator {
             
         }
         
-        return grid
+        let finalGrid = gridModifiers.reduce(grid) {
+            latestGrid, modifier in
+            return modifier.run(self, latestGrid)
+        }
+        
+        self.grid = finalGrid
+        
+        return finalGrid
     }
     
 }

@@ -29,12 +29,16 @@ public struct Point {
         let yDist = y - otherPoint.y
         return Double(sqrt((xDist * xDist) + (yDist * yDist)))
     }
+    
+    public func roundedUp() -> Point {
+        return Point(x: ceil(x), y: ceil(y))
+    }
 }
 
 extension Point: CustomStringConvertible {
     
     public var description: String {
-        return "w:\(x),h:\(y)"
+        return "x:\(x), y:\(y)"
     }
 }
 

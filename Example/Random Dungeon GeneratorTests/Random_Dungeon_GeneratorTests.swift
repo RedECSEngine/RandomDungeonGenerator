@@ -2,6 +2,7 @@
 import XCTest
 import Quick
 import Nimble
+import BWRandomDungeonGenerator
 
 @testable import Random_Dungeon_Generator
 

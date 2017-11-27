@@ -1,31 +1,31 @@
 import Foundation
 
-private class EdgeList<T> where T: Hashable {
+internal class EdgeList<T, D> where T: Hashable {
     
     var vertex: Vertex<T>
-    var edges: [Edge<T>]?
+    var edges: [Edge<T, D>]?
     
     init(vertex: Vertex<T>) {
         self.vertex = vertex
     }
     
-    func addEdge(_ edge: Edge<T>) {
+    func addEdge(_ edge: Edge<T, D>) {
         edges?.append(edge)
     }
 }
 
-open class AdjacencyListGraph<T>: CustomStringConvertible where T: Hashable {
+open class AdjacencyListGraph<T, D>: CustomStringConvertible where T: Hashable {
     
-    fileprivate var adjacencyList: [EdgeList<T>] = []
+    internal var adjacencyList: [EdgeList<T, D>] = []
     
     public required init() {}
     
-    public required init(fromGraph graph: AdjacencyListGraph<T>) {
+    public required init(fromGraph graph: AdjacencyListGraph<T, D>) {
         for edge in graph.edges {
             let from = createVertex(edge.from.data)
             let to = createVertex(edge.to.data)
             
-            addEdge(from, to: to, withWeight: edge.weight)
+            addEdge(from, to: to, data: edge.data, withWeight: edge.weight)
         }
     }
     
@@ -37,8 +37,8 @@ open class AdjacencyListGraph<T>: CustomStringConvertible where T: Hashable {
         return vertices
     }
     
-    open var edges: [Edge<T>] {
-        var allEdges = Set<Edge<T>>()
+    open var edges: [Edge<T, D>] {
+        var allEdges = Set<Edge<T, D>>()
         for edgeList in adjacencyList {
             guard let edges = edgeList.edges else {
                 continue
@@ -67,9 +67,9 @@ open class AdjacencyListGraph<T>: CustomStringConvertible where T: Hashable {
         return vertex
     }
     
-    open func addEdge(_ from: Vertex<T>, to: Vertex<T>, withWeight weight: Double) {
+    open func addEdge(_ from: Vertex<T>, to: Vertex<T>, data: D, withWeight weight: Double) {
         
-        let edge = Edge(from: from, to: to, weight: weight)
+        let edge = Edge(from: from, to: to, data: data, weight: weight)
         let edgeList = adjacencyList[from.index]
         if edgeList.edges != nil {
             edgeList.addEdge(edge)
@@ -78,7 +78,7 @@ open class AdjacencyListGraph<T>: CustomStringConvertible where T: Hashable {
         }
     }
     
-    open func removeEdge(_ edge: Edge<T>) {
+    open func removeEdge(_ edge: Edge<T, D>) {
         let list = adjacencyList[edge.from.index]
         if let edges = list.edges
             , let index = edges.index(of: edge) {
@@ -97,7 +97,7 @@ open class AdjacencyListGraph<T>: CustomStringConvertible where T: Hashable {
             return -1
         }
         
-        for edge: Edge<T> in edges {
+        for edge: Edge<T, D> in edges {
             if edge.to == destinationVertex {
                 return edge.weight
             }
@@ -106,7 +106,7 @@ open class AdjacencyListGraph<T>: CustomStringConvertible where T: Hashable {
         return -1
     }
     
-    open func edgesFrom(_ sourceVertex: Vertex<T>) -> [Edge<T>] {
+    open func edgesFrom(_ sourceVertex: Vertex<T>) -> [Edge<T, D>] {
         return adjacencyList[sourceVertex.index].edges ?? []
     }
     

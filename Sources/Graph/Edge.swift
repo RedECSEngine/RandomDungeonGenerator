@@ -7,11 +7,12 @@
 
 import Foundation
 
-public struct Edge<T>: Equatable where T: Hashable {
+public struct Edge<T, D>: Equatable where T: Hashable {
 
   public let from: Vertex<T>
   public let to: Vertex<T>
 
+  public var data: D
   public let weight: Double
 
 }
@@ -32,7 +33,7 @@ extension Edge: Hashable {
   }
 }
 
-public func == <T>(lhs: Edge<T>, rhs: Edge<T>) -> Bool {
+public func == <T, D>(lhs: Edge<T, D>, rhs: Edge<T, D>) -> Bool {
   guard lhs.from == rhs.from else {
     return false
   }

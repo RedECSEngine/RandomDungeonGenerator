@@ -15,7 +15,7 @@ enum GenerationPhase {
 class GameScene: SKScene {
     
     let dungeonCamera = SKCameraNode()
-    var dungeonGenerator: DungeonGenerator!
+    var dungeonGenerator: DungeonGenerator<DefaultDungeonRoom, DefaultDungeonHallway>!
     
     private var lastUpdateTimeInterval: TimeInterval = 0
     private var phase: GenerationPhase = .fittingRooms
@@ -100,8 +100,8 @@ class GameScene: SKScene {
             }
         case .minimumGraph:
             addRooms()
-            let graph = dungeonGenerator.generateMinimumEdges()
-            addGraph(graph)
+            dungeonGenerator.generateDungeonGraph()
+            addGraph(dungeonGenerator.dungeon)
             if timeInPhase > maxTimePerPhase {
                 phase = .hallways
                 timeInPhase = 0
@@ -120,7 +120,7 @@ class GameScene: SKScene {
     }
     
     func addRooms() {
-        dungeonGenerator.rooms
+        dungeonGenerator.layoutRooms
         .forEach {
             room in
             
@@ -134,7 +134,7 @@ class GameScene: SKScene {
     }
     
     func addCircles() {
-        dungeonGenerator.rooms
+        dungeonGenerator.layoutRooms
         .forEach {
             room in
             
@@ -151,7 +151,7 @@ class GameScene: SKScene {
         }
     }
 
-    func addGraph(_ graph: AdjacencyListGraph<DungeonRoom>) {
+    func addGraph(_ graph: Dungeon<DefaultDungeonRoom, DefaultDungeonHallway>) {
         graph.vertices
             .forEach {
                 vertex in
@@ -177,10 +177,10 @@ class GameScene: SKScene {
     
     func addHallways() {
         dungeonGenerator.generateHallways()
-        dungeonGenerator.hallways.forEach {
-            hallwayRects in
+        dungeonGenerator.dungeon.hallways.forEach {
+            hallway in
             
-            hallwayRects.forEach {
+            hallway.rects.forEach {
                 (rect) in
                 let visualShape = SKShapeNode(rect: rect.cgRect)
                 visualShape.fillColor = .blue

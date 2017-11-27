@@ -1,10 +1,3 @@
-//
-//  Vertex.swift
-//  Graph
-//
-//  Created by Andrew McKnight on 5/8/16.
-//
-
 import Foundation
 
 public struct Vertex<T>: Equatable where T: Hashable {

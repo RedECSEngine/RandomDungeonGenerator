@@ -2,7 +2,7 @@ import Foundation
 
 public typealias DungeonGrid = [[Int]]
 
-public class DungeonGenerator {
+public class DungeonGenerator<RoomType: DungeonRoom & Equatable & Hashable & CustomStringConvertible, HallwayType: DungeonHallway> {
     
     public var dungeonSize: Size = Size(width: 64, height: 64)
     public var creationBounds: Size = Size(width: 64, height: 64)
@@ -18,15 +18,15 @@ public class DungeonGenerator {
     public var initialRoomCreationCount: Int = 30
     public var maximumStepsBeforeRetry: Int = 50
     
-    public var rooms: [DungeonRoom] = []
-    public var hallways: [[Rect]] = []
-    public var grid: [[Int]] = []
-    public var gridModifiers: [GridModifier] = []
+    public var dungeon: Dungeon<RoomType, HallwayType>!
+    
+    public var layoutRooms: [RoomType] = []
+    fileprivate var grid: [[Int]] = []
     
     fileprivate(set) var numberOfStepsTaken = 0
     
     public init() {
-    
+        
     }
     
     public func runCompleteGeneration() {
@@ -55,7 +55,7 @@ public class DungeonGenerator {
     public func generateRooms() {
         
         numberOfStepsTaken = 0
-        rooms = (0..<initialRoomCreationCount).map {
+        layoutRooms = (0..<initialRoomCreationCount).map {
             _ in
             
             let offsetX = (dungeonSize.width - creationBounds.width) / 2
@@ -69,9 +69,9 @@ public class DungeonGenerator {
             let position = Point(x: x, y: y)
             let size = Size(width: width, height: height)
             let rect = Rect(origin: position, size: size)
-            return DungeonRoom(rect: rect)
+            return RoomType.init(rect: rect)
         }
-        hallways.removeAll()
+        dungeon = nil
     }
     
     public func applyFittingStep() {
@@ -82,14 +82,14 @@ public class DungeonGenerator {
         
         numberOfStepsTaken += 1
         removeRoomsOutOfBounds()
-        rooms = rooms.map {
+        layoutRooms = layoutRooms.map {
             currentRoom in
             
             var velocityX: Double = 0
             var velocityY: Double = 0
             var neighborCount:Int = 0
             
-            rooms.forEach {
+            layoutRooms.forEach {
                 otherRoom in
                 
                 guard currentRoom !== otherRoom else {
@@ -122,12 +122,12 @@ public class DungeonGenerator {
             let newY = currentRoom.rect.origin.y + velocityY
             let newPosition = Point(x: newX, y: newY)
             let newRect = Rect(origin: newPosition, size: currentRoom.rect.size)
-            return DungeonRoom(rect: newRect)
+            return RoomType(rect: newRect)
         }
     }
     
     public func roundRoomPositions() {
-        rooms.forEach {
+        layoutRooms.forEach {
             room in
             let newX = ceil(room.rect.origin.x)
             let newY = ceil(room.rect.origin.y)
@@ -137,8 +137,8 @@ public class DungeonGenerator {
     
     public func containsNoIntersectingRooms() -> Bool {
    
-        for currentRoom in rooms {
-            for otherRoom in rooms {
+        for currentRoom in layoutRooms {
+            for otherRoom in layoutRooms {
             
                 guard currentRoom !== otherRoom else {
                     continue
@@ -158,32 +158,32 @@ public class DungeonGenerator {
     
         //inset dungeon rect to prevent rooms on edges
         let dungeonRect = Rect(origin: Point(x: 0, y: 0), size: dungeonSize).inset(by: 1)
-        rooms = rooms.filter {
+        layoutRooms = layoutRooms.filter {
             room -> Bool in
             return dungeonRect.contains(room.rect)
         }
     }
     
-    public func getRoomsDictionary() -> [String: DungeonRoom] {
+    public func getRoomsDictionary() -> [String: RoomType] {
     
-        return rooms.reduce([:], {
-            (dict, room) -> [String: DungeonRoom] in
+        return layoutRooms.reduce([:], {
+            (dict, room) -> [String: RoomType] in
             var new = dict
             new[room.rect.center.description] = room
             return new
         })
     }
     
-    public func generateGraph() -> AdjacencyListGraph<DungeonRoom> {
+    public func generateGraph() -> Dungeon<RoomType, HallwayType> {
    
-        let graph = AdjacencyListGraph<DungeonRoom>()
+        let graph = Dungeon<RoomType, HallwayType>()
         let connectableRoomRadius = (maxRoomSpacing / 2)
-        let connectedRooms = rooms.reduce([:]) {
-            connections, currentRoom -> [DungeonRoom: [DungeonRoom]] in
+        let connectedRooms = layoutRooms.reduce([:]) {
+            connections, currentRoom -> [RoomType: [RoomType]] in
             
             var currentRoomReach = Circle(fittedTo: currentRoom.rect)
             currentRoomReach.radius += connectableRoomRadius
-            let pairings: [DungeonRoom] = rooms.flatMap {
+            let pairings: [RoomType] = layoutRooms.flatMap {
                 otherRoom in
                 
                 guard currentRoom !== otherRoom else { return nil }
@@ -206,7 +206,7 @@ public class DungeonGenerator {
             return new
         }
         
-        var finalRooms: [DungeonRoom] = []
+        var finalRooms: [RoomType] = []
         finalRooms.reserveCapacity(connectedRooms.count)
         connectedRooms.forEach {
             (currentRoom, connectedRooms) in
@@ -216,50 +216,51 @@ public class DungeonGenerator {
             connectedRooms.forEach {
                 otherRoom in
                 let otherVertex = graph.createVertex(otherRoom)
-                graph.addEdge(currentVertex, to: otherVertex, withWeight: currentRoom.rect.center.distanceFrom(otherRoom.rect.center))
+                let hallway = HallwayType.init(points: [])
+                graph.addEdge(currentVertex, to: otherVertex, data: hallway, withWeight: currentRoom.rect.center.distanceFrom(otherRoom.rect.center))
             }
         }
-        rooms = finalRooms
+        layoutRooms = finalRooms
         
         return graph
     }
     
-    public func generateMinimumEdges() -> AdjacencyListGraph<DungeonRoom> {
-        return minimumSpanningTreeKruskal(graph: generateGraph()).tree
+    public func generateDungeonGraph() {
+        guard dungeon == nil else { return }
+        
+        let tree = minimumSpanningTreeKruskal(graph: generateGraph()).tree
+        self.dungeon = Dungeon(fromGraph: tree)
     }
     
     public func generateHallways() {
         
-        guard hallways.isEmpty else {
-            return
-        }
-        
-        hallways = generateLineHallways().flatMap {
-            lineSet in
+        generateDungeonGraph()
+        generateLineHallways()
+        dungeon.hallways.forEach {
+            (hallway) in
+            
+            let lineSet = hallway.points
            
-            guard lineSet.count >= 2 else { return nil }
+            guard lineSet.count >= 2 else { return }
             
             let firstLine = (lineSet[0].roundedUp(), lineSet[1].roundedUp())
             let verticalDiff = firstLine.0.diffOf(firstLine.1)
             let verticalDirection = Direction.fromPoint(verticalDiff)
-            
-            var rects: [Rect] = []
-            
             let roundedHalfWidth = ceil(hallwayWidth/2)
             
             //vertical hallways are first
             if verticalDirection == .down {
                 let origin = firstLine.0.offsetBy(x: -roundedHalfWidth, y: 0)
                 let rect = Rect(origin: origin, size: Size(width: hallwayWidth, height: firstLine.0.distanceFrom(firstLine.1)))
-                rects.append(rect)
+                hallway.rects.append(rect)
             } else {
                 let origin = firstLine.1.offsetBy(x: -roundedHalfWidth, y: 0)
                 let rect = Rect(origin: origin, size: Size(width: hallwayWidth, height: firstLine.0.distanceFrom(firstLine.1)))
-                rects.append(rect)
+                hallway.rects.append(rect)
             }
             
             guard lineSet.count >= 3 else {
-                return rects
+                return
             }
             
             let secondLine = (lineSet[1].roundedUp(), lineSet[2].roundedUp())
@@ -270,42 +271,37 @@ public class DungeonGenerator {
             if horizontalDirection == .left {
                 let origin = secondLine.0.offsetBy(x: 0, y: -roundedHalfWidth)
                 let rect = Rect(origin: origin, size: Size(width: secondLine.0.distanceFrom(secondLine.1), height: hallwayWidth))
-                rects.append(rect)
+                hallway.rects.append(rect)
             } else {
                 let origin = secondLine.1.offsetBy(x: 0, y: -roundedHalfWidth)
                 let rect = Rect(origin: origin, size: Size(width: secondLine.0.distanceFrom(secondLine.1), height: hallwayWidth))
-                rects.append(rect)
+                hallway.rects.append(rect)
             }
-            
-            return rects
         }
         
     }
     
-    public func generateLineHallways() -> [[Point]] {
-        
-        return generateMinimumEdges().edges.map {
-            (edge) -> [Point] in
+    public func generateLineHallways() {
+
+        dungeon.edges.forEach {
+            (edge) in
             
             let fromRoom = edge.from.data
             let toRoom = edge.to.data
             
-            var linePoints = [Point]()
             let lineOrigin = fromRoom.rect.center
-            linePoints.append(lineOrigin)
+            edge.data.points.append(lineOrigin)
             
             let positionDiff = toRoom.rect.center.diffOf(lineOrigin)
             let verticalLinePoint = lineOrigin.offsetBy(Point(x: 0, y: positionDiff.y))
-            linePoints.append(verticalLinePoint)
+            edge.data.points.append(verticalLinePoint)
             
             if toRoom.rect.intersects(line: (lineOrigin, verticalLinePoint)) {
-                return linePoints
+                return
             }
             
             let horizontalLinePoint = verticalLinePoint.offsetBy(Point(x: positionDiff.x, y: 0))
-            linePoints.append(horizontalLinePoint)
-            
-            return linePoints
+            edge.data.points.append(horizontalLinePoint)
         }
     }
     
@@ -318,7 +314,7 @@ public class DungeonGenerator {
         let row: [Int] = Array(repeating: 0, count: Int(dungeonSize.width))
         var grid: [[Int]] = Array(repeating: row, count: Int(dungeonSize.height))
         
-        let rects = rooms.map({ $0.rect }) + hallways.flatMap({ $0 })
+        let rects = layoutRooms.map({ $0.rect }) + dungeon.hallways.flatMap({ $0.rects })
         
         for rect in rects {
         
@@ -335,14 +331,9 @@ public class DungeonGenerator {
             
         }
         
-        let finalGrid = gridModifiers.reduce(grid) {
-            latestGrid, modifier in
-            return modifier.run(self, latestGrid)
-        }
+        self.grid = grid
         
-        self.grid = finalGrid
-        
-        return finalGrid
+        return self.grid
     }
     
 }

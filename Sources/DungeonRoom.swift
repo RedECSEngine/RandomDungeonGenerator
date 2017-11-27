@@ -1,32 +1,29 @@
 import Foundation
 import SpriteKit
 
-public class DungeonRoom {
-
-    public var rect: Rect
-    
-    public init(rect: Rect) {
-        self.rect = rect
-    }
+public protocol DungeonRoom: class {
+    var rect: Rect { get set }
+    init(rect: Rect)
 }
 
-extension DungeonRoom: CustomStringConvertible {
+public protocol DungeonHallway: class {
+    var points: [Point] { get set }
+    var rects: [Rect] { get set }
+    init(points: [Point])
+}
+
+
+extension DungeonRoom where Self: CustomStringConvertible {
 
     public var description: String {
         return rect.center.description
     }
 }
 
-extension DungeonRoom: Equatable {  }
-
-public func == (_ lhs: DungeonRoom, _ rhs: DungeonRoom) -> Bool {
-    return lhs.rect == rhs.rect
-}
-
-extension DungeonRoom: Hashable {
+extension DungeonRoom where Self: Hashable {
 
     public var hashValue: Int {
-        return description.hashValue
+        return rect.center.description.hashValue
     }
     
 }

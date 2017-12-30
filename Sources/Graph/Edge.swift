@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct Edge<T, D>: Equatable where T: Hashable {
+public struct Edge<T, D>: Equatable, Codable where T: Hashable & Codable, D: Codable {
 
   public let from: Vertex<T>
   public let to: Vertex<T>

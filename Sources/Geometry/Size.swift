@@ -1,6 +1,6 @@
 import Foundation
 
-public struct Size {
+public struct Size: Codable {
 
     public var width: Double
     public var height: Double

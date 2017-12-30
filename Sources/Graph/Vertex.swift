@@ -1,6 +1,6 @@
 import Foundation
 
-public struct Vertex<T>: Equatable where T: Hashable {
+public struct Vertex<T>: Equatable, Codable where T: Hashable & Codable {
 
   public var data: T
   public let index: Int

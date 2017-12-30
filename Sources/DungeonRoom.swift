@@ -12,6 +12,8 @@ public protocol DungeonHallway: class {
     init(points: [Point])
 }
 
+public typealias DungeonRoomProtocolRequirements = DungeonRoom & Equatable & Hashable & Codable
+public typealias DungeonHallwayProtocolRequirements = DungeonHallway & Equatable & Hashable & Codable
 
 extension DungeonRoom where Self: CustomStringConvertible {
 

@@ -10,7 +10,7 @@ DEPENDENCIES:
 
 EXTERNAL SOURCES:
   BWRandomDungeonGenerator:
-    :path: "../"
+    :path: ../
 
 SPEC CHECKSUMS:
   BWRandomDungeonGenerator: 3467da3a0b7f33b3e4f8b6feb5391b528e67f691
@@ -19,4 +19,4 @@ SPEC CHECKSUMS:
 
 PODFILE CHECKSUM: 53f606ce6c784fc409419ba37f879e2de061077f
 
-COCOAPODS: 1.2.1
+COCOAPODS: 1.3.1

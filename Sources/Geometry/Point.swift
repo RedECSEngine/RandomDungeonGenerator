@@ -1,7 +1,7 @@
 
 import Foundation
 
-public struct Point {
+public struct Point: Codable {
     public var x: Double
     public var y: Double
     

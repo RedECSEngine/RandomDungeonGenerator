@@ -2,7 +2,11 @@ import Foundation
 
 public typealias DungeonGrid = [[Int]]
 
-public class DungeonGenerator<RoomType: DungeonRoom & Equatable & Hashable, HallwayType: DungeonHallway> {
+public class DungeonGenerator<RoomType: DungeonRoomProtocolRequirements, HallwayType: DungeonHallwayProtocolRequirements>: Codable {
+
+    enum CodingKeys: String, CodingKey {
+        case dungeon
+    }
     
     public var dungeonSize: Size = Size(width: 64, height: 64)
     public var creationBounds: Size = Size(width: 64, height: 64)
@@ -27,6 +31,16 @@ public class DungeonGenerator<RoomType: DungeonRoom & Equatable & Hashable, Hall
     
     public init() {
         
+    }
+
+    public required init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        dungeon = try values.decode(Dungeon<RoomType, HallwayType>.self, forKey: .dungeon)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(dungeon, forKey: .dungeon)
     }
     
     public func runCompleteGeneration() {
@@ -311,29 +325,9 @@ public class DungeonGenerator<RoomType: DungeonRoom & Equatable & Hashable, Hall
             return self.grid
         }
         
-        let row: [Int] = Array(repeating: 0, count: Int(dungeonSize.width))
-        var grid: [[Int]] = Array(repeating: row, count: Int(dungeonSize.height))
-        
-        let rects = layoutRooms.map({ $0.rect }) + dungeon.hallways.flatMap({ $0.rects })
-        
-        for rect in rects {
-        
-            let initialX = Int(rect.origin.x)
-            let maxX = Int(rect.origin.x + rect.size.width)
-            let initialY = Int(rect.origin.y)
-            let maxY = Int(rect.origin.y + rect.size.height)
-            
-            for x in (initialX..<maxX) {
-                for y in (initialY..<maxY) {
-                    grid[y][x] = 1
-                }
-            }
-            
-        }
-        
+        let grid = dungeon.to2DGrid(canvasSize: dungeonSize)
         self.grid = grid
-        
-        return self.grid
+        return grid
     }
     
 }

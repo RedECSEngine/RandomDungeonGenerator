@@ -1,6 +1,11 @@
 import Foundation
 
-internal class EdgeList<T, D> where T: Hashable {
+public class EdgeList<T, D>: Codable where T: Hashable & Codable, D: Codable {
+    
+    enum CodingKeys: String, CodingKey {
+        case vertex
+        case edges
+    }
     
     var vertex: Vertex<T>
     var edges: [Edge<T, D>]?
@@ -9,25 +14,34 @@ internal class EdgeList<T, D> where T: Hashable {
         self.vertex = vertex
     }
     
+    public required init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        vertex = try values.decode(Vertex<T>.self, forKey: .vertex)
+        let edges = try values.decode([Edge<T, D>].self, forKey: .edges)
+        if edges.isEmpty == false {
+            self.edges = edges
+        }
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(vertex, forKey: .vertex)
+        let edgesArray = edges ?? []
+        try container.encode(edgesArray, forKey: .edges)
+    }
+    
     func addEdge(_ edge: Edge<T, D>) {
         edges?.append(edge)
     }
 }
 
-open class AdjacencyListGraph<T, D>: CustomStringConvertible where T: Hashable {
+open class AdjacencyListGraph<T, D>: CustomStringConvertible, Codable where T: Hashable & Codable, D: Codable {
+    
+    enum CodingKeys: String, CodingKey {
+        case adjacencyList
+    }
     
     internal var adjacencyList: [EdgeList<T, D>] = []
-    
-    public required init() {}
-    
-    public required init(fromGraph graph: AdjacencyListGraph<T, D>) {
-        for edge in graph.edges {
-            let from = createVertex(edge.from.data)
-            let to = createVertex(edge.to.data)
-            
-            addEdge(from, to: to, data: edge.data, withWeight: edge.weight)
-        }
-    }
     
     open var vertices: [Vertex<T>] {
         var vertices = [Vertex<T>]()
@@ -51,6 +65,27 @@ open class AdjacencyListGraph<T, D>: CustomStringConvertible where T: Hashable {
         return Array(allEdges)
     }
     
+    public required init() {}
+    
+    public required init(fromGraph graph: AdjacencyListGraph<T, D>) {
+        for edge in graph.edges {
+            let from = createVertex(edge.from.data)
+            let to = createVertex(edge.to.data)
+            
+            addEdge(from, to: to, data: edge.data, withWeight: edge.weight)
+        }
+    }
+    
+    public required init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        adjacencyList = try values.decode([EdgeList<T, D>].self, forKey: .adjacencyList)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(adjacencyList, forKey: .adjacencyList)
+    }
+
     open func createVertex(_ data: T) -> Vertex<T> {
         // check if the vertex already exists
         let matchingVertices = vertices.filter { vertex in

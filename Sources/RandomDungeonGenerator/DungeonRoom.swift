@@ -1,12 +1,12 @@
 import Foundation
 import SpriteKit
 
-public protocol DungeonRoom: class {
+public protocol DungeonRoom: AnyObject {
     var rect: Rect { get set }
     init(rect: Rect)
 }
 
-public protocol DungeonHallway: class {
+public protocol DungeonHallway: AnyObject {
     var points: [Point] { get set }
     var rects: [Rect] { get set }
     init(points: [Point])

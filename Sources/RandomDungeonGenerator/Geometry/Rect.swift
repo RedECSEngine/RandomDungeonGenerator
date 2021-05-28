@@ -105,7 +105,6 @@ public struct Rect {
 }
 
 extension Rect: CustomStringConvertible {
-    
     public var description: String {
         return "\(origin.description)/\(size.description)"
     }
@@ -118,9 +117,7 @@ public func == (_ lhs: Rect, _ rhs: Rect) -> Bool {
 }
 
 extension Rect: Hashable {
-    
-    public var hashValue: Int {
-        return description.hashValue
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(description)
     }
-    
 }

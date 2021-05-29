@@ -1,6 +1,0 @@
-framework module BWRandomDungeonGenerator {
-  umbrella header "BWRandomDungeonGenerator-umbrella.h"
-
-  export *
-  module * { export * }
-}

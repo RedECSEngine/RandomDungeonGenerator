@@ -1,5 +1,5 @@
 import SpriteKit
-import BWRandomDungeonGenerator
+import RandomDungeonGenerator
 
 extension Point {
     var cgPoint: CGPoint {

@@ -1,7 +1,7 @@
 
 import SpriteKit
 import GameplayKit
-import BWRandomDungeonGenerator
+import RandomDungeonGenerator
 
 enum GenerationPhase {
     case fittingRooms

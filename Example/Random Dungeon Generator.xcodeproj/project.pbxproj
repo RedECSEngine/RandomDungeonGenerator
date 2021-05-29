@@ -3,11 +3,10 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 46;
+	objectVersion = 52;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		4303ACDF6440AA83471354AC /* Pods_Random_Dungeon_GeneratorTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 46D68B674F54AD6A1BFE09B9 /* Pods_Random_Dungeon_GeneratorTests.framework */; };
 		75152FDE1F36396800715F66 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75152FDD1F36396800715F66 /* AppDelegate.swift */; };
 		75152FE01F36396800715F66 /* GameScene.sks in Resources */ = {isa = PBXBuildFile; fileRef = 75152FDF1F36396800715F66 /* GameScene.sks */; };
 		75152FE21F36396800715F66 /* Actions.sks in Resources */ = {isa = PBXBuildFile; fileRef = 75152FE11F36396800715F66 /* Actions.sks */; };
@@ -16,20 +15,9 @@
 		75152FE91F36396800715F66 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 75152FE71F36396800715F66 /* Main.storyboard */; };
 		75152FEB1F36396800715F66 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 75152FEA1F36396800715F66 /* Assets.xcassets */; };
 		75152FEE1F36396800715F66 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 75152FEC1F36396800715F66 /* LaunchScreen.storyboard */; };
-		75152FF91F36396800715F66 /* Random_Dungeon_GeneratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75152FF81F36396800715F66 /* Random_Dungeon_GeneratorTests.swift */; };
 		751530041F36851100715F66 /* 2DGeometry+CoreGraphics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 751530031F36851100715F66 /* 2DGeometry+CoreGraphics.swift */; };
-		7EF5FF14FA0A605C0F8ED392 /* Pods_Random_Dungeon_Generator.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CD5D32C976A3E2F19328B2B6 /* Pods_Random_Dungeon_Generator.framework */; };
+		7526FE3D2661BDC90084059B /* RandomDungeonGenerator in Frameworks */ = {isa = PBXBuildFile; productRef = 7526FE3C2661BDC90084059B /* RandomDungeonGenerator */; };
 /* End PBXBuildFile section */
-
-/* Begin PBXContainerItemProxy section */
-		75152FF51F36396800715F66 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 75152FD21F36396800715F66 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 75152FD91F36396800715F66;
-			remoteInfo = "Random Dungeon Generator";
-		};
-/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		46D68B674F54AD6A1BFE09B9 /* Pods_Random_Dungeon_GeneratorTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Random_Dungeon_GeneratorTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -43,15 +31,9 @@
 		75152FEA1F36396800715F66 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		75152FED1F36396800715F66 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		75152FEF1F36396800715F66 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		75152FF41F36396800715F66 /* Random Dungeon GeneratorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Random Dungeon GeneratorTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		75152FF81F36396800715F66 /* Random_Dungeon_GeneratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Random_Dungeon_GeneratorTests.swift; sourceTree = "<group>"; };
-		75152FFA1F36396800715F66 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		751530031F36851100715F66 /* 2DGeometry+CoreGraphics.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "2DGeometry+CoreGraphics.swift"; sourceTree = "<group>"; };
-		80C3533DCB90F8153DA989FC /* Pods-Random Dungeon GeneratorTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Random Dungeon GeneratorTests.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Random Dungeon GeneratorTests/Pods-Random Dungeon GeneratorTests.debug.xcconfig"; sourceTree = "<group>"; };
-		846C29789674CFDCF161B00F /* Pods-Random Dungeon Generator.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Random Dungeon Generator.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Random Dungeon Generator/Pods-Random Dungeon Generator.debug.xcconfig"; sourceTree = "<group>"; };
-		C0AC59A3E883719AF67C6A35 /* Pods-Random Dungeon GeneratorTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Random Dungeon GeneratorTests.release.xcconfig"; path = "Pods/Target Support Files/Pods-Random Dungeon GeneratorTests/Pods-Random Dungeon GeneratorTests.release.xcconfig"; sourceTree = "<group>"; };
+		7526FE3B2661BD7F0084059B /* swift-random-dungeon-generator */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "swift-random-dungeon-generator"; path = ..; sourceTree = "<group>"; };
 		CD5D32C976A3E2F19328B2B6 /* Pods_Random_Dungeon_Generator.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Random_Dungeon_Generator.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		EC83761772751A136747B126 /* Pods-Random Dungeon Generator.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Random Dungeon Generator.release.xcconfig"; path = "Pods/Target Support Files/Pods-Random Dungeon Generator/Pods-Random Dungeon Generator.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -59,15 +41,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7EF5FF14FA0A605C0F8ED392 /* Pods_Random_Dungeon_Generator.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		75152FF11F36396800715F66 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				4303ACDF6440AA83471354AC /* Pods_Random_Dungeon_GeneratorTests.framework in Frameworks */,
+				7526FE3D2661BDC90084059B /* RandomDungeonGenerator in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -77,10 +51,9 @@
 		75152FD11F36396800715F66 = {
 			isa = PBXGroup;
 			children = (
+				7526FE3B2661BD7F0084059B /* swift-random-dungeon-generator */,
 				75152FDC1F36396800715F66 /* Code Sample */,
-				75152FF71F36396800715F66 /* Random Dungeon GeneratorTests */,
 				75152FDB1F36396800715F66 /* Products */,
-				785298DBB21DE9539F83571F /* Pods */,
 				ADC9E4B57A4B0E5ED2B0595B /* Frameworks */,
 			);
 			sourceTree = "<group>";
@@ -89,7 +62,6 @@
 			isa = PBXGroup;
 			children = (
 				75152FDA1F36396800715F66 /* Random Dungeon Generator.app */,
-				75152FF41F36396800715F66 /* Random Dungeon GeneratorTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -112,26 +84,6 @@
 			path = "Random Dungeon Generator";
 			sourceTree = "<group>";
 		};
-		75152FF71F36396800715F66 /* Random Dungeon GeneratorTests */ = {
-			isa = PBXGroup;
-			children = (
-				75152FF81F36396800715F66 /* Random_Dungeon_GeneratorTests.swift */,
-				75152FFA1F36396800715F66 /* Info.plist */,
-			);
-			path = "Random Dungeon GeneratorTests";
-			sourceTree = "<group>";
-		};
-		785298DBB21DE9539F83571F /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				846C29789674CFDCF161B00F /* Pods-Random Dungeon Generator.debug.xcconfig */,
-				EC83761772751A136747B126 /* Pods-Random Dungeon Generator.release.xcconfig */,
-				80C3533DCB90F8153DA989FC /* Pods-Random Dungeon GeneratorTests.debug.xcconfig */,
-				C0AC59A3E883719AF67C6A35 /* Pods-Random Dungeon GeneratorTests.release.xcconfig */,
-			);
-			name = Pods;
-			sourceTree = "<group>";
-		};
 		ADC9E4B57A4B0E5ED2B0595B /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -148,42 +100,21 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 75152FFD1F36396800715F66 /* Build configuration list for PBXNativeTarget "Random Dungeon Generator" */;
 			buildPhases = (
-				EED111F8658716A62A3AB016 /* [CP] Check Pods Manifest.lock */,
 				75152FD61F36396800715F66 /* Sources */,
 				75152FD71F36396800715F66 /* Frameworks */,
 				75152FD81F36396800715F66 /* Resources */,
-				C8DD1429B40512272C70EDF0 /* [CP] Embed Pods Frameworks */,
-				50087DF5CFFCBE443DD3CC21 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			name = "Random Dungeon Generator";
+			packageProductDependencies = (
+				7526FE3C2661BDC90084059B /* RandomDungeonGenerator */,
+			);
 			productName = "Random Dungeon Generator";
 			productReference = 75152FDA1F36396800715F66 /* Random Dungeon Generator.app */;
 			productType = "com.apple.product-type.application";
-		};
-		75152FF31F36396800715F66 /* Random Dungeon GeneratorTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 751530001F36396800715F66 /* Build configuration list for PBXNativeTarget "Random Dungeon GeneratorTests" */;
-			buildPhases = (
-				9CCD82F94ED3BCD238250600 /* [CP] Check Pods Manifest.lock */,
-				75152FF01F36396800715F66 /* Sources */,
-				75152FF11F36396800715F66 /* Frameworks */,
-				75152FF21F36396800715F66 /* Resources */,
-				A38F9B33203B64CF262CCD09 /* [CP] Embed Pods Frameworks */,
-				9FB3C2403EE1F6DE4EEAEF0F /* [CP] Copy Pods Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				75152FF61F36396800715F66 /* PBXTargetDependency */,
-			);
-			name = "Random Dungeon GeneratorTests";
-			productName = "Random Dungeon GeneratorTests";
-			productReference = 75152FF41F36396800715F66 /* Random Dungeon GeneratorTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -200,12 +131,6 @@
 						DevelopmentTeam = 334Q375TSA;
 						ProvisioningStyle = Automatic;
 					};
-					75152FF31F36396800715F66 = {
-						CreatedOnToolsVersion = 8.3.3;
-						DevelopmentTeam = 334Q375TSA;
-						ProvisioningStyle = Automatic;
-						TestTargetID = 75152FD91F36396800715F66;
-					};
 				};
 			};
 			buildConfigurationList = 75152FD51F36396800715F66 /* Build configuration list for PBXProject "Random Dungeon Generator" */;
@@ -213,6 +138,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 				Base,
 			);
@@ -222,7 +148,6 @@
 			projectRoot = "";
 			targets = (
 				75152FD91F36396800715F66 /* Random Dungeon Generator */,
-				75152FF31F36396800715F66 /* Random Dungeon GeneratorTests */,
 			);
 		};
 /* End PBXProject section */
@@ -240,107 +165,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		75152FF21F36396800715F66 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXResourcesBuildPhase section */
-
-/* Begin PBXShellScriptBuildPhase section */
-		50087DF5CFFCBE443DD3CC21 /* [CP] Copy Pods Resources */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = "[CP] Copy Pods Resources";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-Random Dungeon Generator/Pods-Random Dungeon Generator-resources.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		9CCD82F94ED3BCD238250600 /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n";
-			showEnvVarsInLog = 0;
-		};
-		9FB3C2403EE1F6DE4EEAEF0F /* [CP] Copy Pods Resources */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = "[CP] Copy Pods Resources";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-Random Dungeon GeneratorTests/Pods-Random Dungeon GeneratorTests-resources.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		A38F9B33203B64CF262CCD09 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-Random Dungeon GeneratorTests/Pods-Random Dungeon GeneratorTests-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		C8DD1429B40512272C70EDF0 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-Random Dungeon Generator/Pods-Random Dungeon Generator-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		EED111F8658716A62A3AB016 /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n";
-			showEnvVarsInLog = 0;
-		};
-/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		75152FD61F36396800715F66 /* Sources */ = {
@@ -354,23 +179,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		75152FF01F36396800715F66 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				75152FF91F36396800715F66 /* Random_Dungeon_GeneratorTests.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		75152FF61F36396800715F66 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 75152FD91F36396800715F66 /* Random Dungeon Generator */;
-			targetProxy = 75152FF51F36396800715F66 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		75152FE71F36396800715F66 /* Main.storyboard */ = {
@@ -481,7 +290,8 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
 			};
@@ -489,61 +299,33 @@
 		};
 		75152FFE1F36396800715F66 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 846C29789674CFDCF161B00F /* Pods-Random Dungeon Generator.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				DEVELOPMENT_TEAM = 334Q375TSA;
 				INFOPLIST_FILE = "Random Dungeon Generator/Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = "ca.bitwit.Random-Dungeon-Generator";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 3.0;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
 		};
 		75152FFF1F36396800715F66 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = EC83761772751A136747B126 /* Pods-Random Dungeon Generator.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				DEVELOPMENT_TEAM = 334Q375TSA;
 				INFOPLIST_FILE = "Random Dungeon Generator/Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = "ca.bitwit.Random-Dungeon-Generator";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 3.0;
-			};
-			name = Release;
-		};
-		751530011F36396800715F66 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 80C3533DCB90F8153DA989FC /* Pods-Random Dungeon GeneratorTests.debug.xcconfig */;
-			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				DEVELOPMENT_TEAM = 334Q375TSA;
-				INFOPLIST_FILE = "Random Dungeon GeneratorTests/Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = "ca.bitwit.Random-Dungeon-GeneratorTests";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 3.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Random Dungeon Generator.app/Random Dungeon Generator";
-			};
-			name = Debug;
-		};
-		751530021F36396800715F66 /* Release */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = C0AC59A3E883719AF67C6A35 /* Pods-Random Dungeon GeneratorTests.release.xcconfig */;
-			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				DEVELOPMENT_TEAM = 334Q375TSA;
-				INFOPLIST_FILE = "Random Dungeon GeneratorTests/Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = "ca.bitwit.Random-Dungeon-GeneratorTests";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 3.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Random Dungeon Generator.app/Random Dungeon Generator";
+				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
 		};
@@ -568,16 +350,14 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		751530001F36396800715F66 /* Build configuration list for PBXNativeTarget "Random Dungeon GeneratorTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				751530011F36396800715F66 /* Debug */,
-				751530021F36396800715F66 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 /* End XCConfigurationList section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		7526FE3C2661BDC90084059B /* RandomDungeonGenerator */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RandomDungeonGenerator;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 75152FD21F36396800715F66 /* Project object */;
 }

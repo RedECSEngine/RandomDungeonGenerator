@@ -309,7 +309,13 @@ public class DungeonGenerator<RoomType: DungeonRoom & Equatable & Hashable, Hall
             let maxY = Int(rect.origin.y + rect.size.height)
 
             for x in initialX ..< maxX {
+                if x >= Int(dungeonSize.width) {
+                    break
+                }
                 for y in initialY ..< maxY {
+                    if y >= Int(dungeonSize.height) {
+                        break
+                    }
                     grid[y][x] = 1
                 }
             }

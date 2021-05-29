@@ -12,7 +12,7 @@ public func == (_ lhs: DefaultDungeonRoom, _ rhs: DefaultDungeonRoom) -> Bool {
     return lhs.rect == rhs.rect
 }
 
-public class DefaultDungeonHallway: DungeonHallway {
+public class DefaultDungeonHallway: DungeonHallway, Codable {
     public var points: [Point]
     public var rects: [Rect] = []
 

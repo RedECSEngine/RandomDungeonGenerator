@@ -78,7 +78,7 @@ open class AdjacencyListGraph<T, D>: CustomStringConvertible where T: Hashable {
     open func removeEdge(_ edge: Edge<T, D>) {
         let list = adjacencyList[edge.from.index]
         if let edges = list.edges,
-           let index = edges.index(of: edge)
+           let index = edges.firstIndex(of: edge)
         {
             adjacencyList[edge.from.index].edges?.remove(at: index)
         }

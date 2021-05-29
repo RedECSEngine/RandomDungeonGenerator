@@ -1,6 +1,6 @@
 import Foundation
 
-public class Dungeon<RoomType: DungeonRoom & Equatable & Hashable,
+public final class Dungeon<RoomType: DungeonRoom & Equatable & Hashable,
     HallwayType>: AdjacencyListGraph<RoomType, HallwayType>
 {
     public var rooms: [RoomType] {
@@ -11,3 +11,5 @@ public class Dungeon<RoomType: DungeonRoom & Equatable & Hashable,
         return edges.map { $0.data }
     }
 }
+
+extension Dungeon: Codable where RoomType: Codable, HallwayType: Codable {}

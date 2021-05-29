@@ -173,7 +173,7 @@ public class DungeonGenerator<RoomType: DungeonRoom & Equatable & Hashable, Hall
 
             var currentRoomReach = Circle(fittedTo: currentRoom.rect)
             currentRoomReach.radius += connectableRoomRadius
-            let pairings: [RoomType] = layoutRooms.flatMap {
+            let pairings: [RoomType] = layoutRooms.compactMap {
                 otherRoom in
 
                 guard currentRoom !== otherRoom else { return nil }

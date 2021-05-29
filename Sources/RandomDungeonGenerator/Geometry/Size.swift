@@ -1,6 +1,6 @@
 import Foundation
 
-public struct Size {
+public struct Size: Codable {
     public var width: Double
     public var height: Double
 
@@ -23,7 +23,7 @@ public func == (_ lhs: Size, _ rhs: Size) -> Bool {
 }
 
 extension Size: Hashable {
-    public var hashValue: Int {
-        return description.hashValue
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(description)
     }
 }

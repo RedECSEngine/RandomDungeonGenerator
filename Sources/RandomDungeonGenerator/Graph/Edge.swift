@@ -22,9 +22,10 @@ extension Edge: CustomStringConvertible {
 }
 
 extension Edge: Hashable {
-    public var hashValue: Int {
-        let string = "\(from.description)\(to.description)\(weight)"
-        return string.hashValue
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(from)
+        hasher.combine(to)
+        hasher.combine(weight)
     }
 }
 

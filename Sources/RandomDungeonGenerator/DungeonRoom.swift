@@ -19,7 +19,7 @@ public extension DungeonRoom where Self: CustomStringConvertible {
 }
 
 public extension DungeonRoom where Self: Hashable {
-    var hashValue: Int {
-        return rect.center.description.hashValue
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(rect.center.description)
     }
 }

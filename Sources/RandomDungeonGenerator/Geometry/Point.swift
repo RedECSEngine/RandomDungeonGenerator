@@ -1,7 +1,7 @@
 
 import Foundation
 
-public struct Point {
+public struct Point: Codable {
     public var x: Double
     public var y: Double
 
@@ -48,7 +48,7 @@ public func == (_ lhs: Point, _ rhs: Point) -> Bool {
 }
 
 extension Point: Hashable {
-    public var hashValue: Int {
-        return description.hashValue
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(description)
     }
 }

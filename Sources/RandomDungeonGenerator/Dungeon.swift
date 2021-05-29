@@ -1,14 +1,13 @@
 import Foundation
 
-public class Dungeon<RoomType: DungeonRoom & Equatable & Hashable
-                    , HallwayType>: AdjacencyListGraph<RoomType, HallwayType> {
-    
+public class Dungeon<RoomType: DungeonRoom & Equatable & Hashable,
+    HallwayType>: AdjacencyListGraph<RoomType, HallwayType>
+{
     public var rooms: [RoomType] {
-        return self.adjacencyList.map { $0.vertex.data }
+        return adjacencyList.map { $0.vertex.data }
     }
-    
+
     public var hallways: [HallwayType] {
-        return self.edges.map { $0.data }
+        return edges.map { $0.data }
     }
-    
 }

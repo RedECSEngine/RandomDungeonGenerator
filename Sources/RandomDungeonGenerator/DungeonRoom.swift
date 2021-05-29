@@ -12,18 +12,14 @@ public protocol DungeonHallway: AnyObject {
     init(points: [Point])
 }
 
-
-extension DungeonRoom where Self: CustomStringConvertible {
-
-    public var description: String {
+public extension DungeonRoom where Self: CustomStringConvertible {
+    var description: String {
         return rect.center.description
     }
 }
 
-extension DungeonRoom where Self: Hashable {
-
-    public var hashValue: Int {
+public extension DungeonRoom where Self: Hashable {
+    var hashValue: Int {
         return rect.center.description.hashValue
     }
-    
 }

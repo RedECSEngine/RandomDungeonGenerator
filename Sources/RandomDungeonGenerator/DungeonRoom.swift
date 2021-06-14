@@ -1,12 +1,12 @@
 import Foundation
 import SpriteKit
 
-public protocol DungeonRoom: AnyObject {
+public protocol DungeonRoom: Equatable, Hashable, Codable {
     var rect: Rect { get set }
     init(rect: Rect)
 }
 
-public protocol DungeonHallway: AnyObject {
+public protocol DungeonHallway: Equatable, Hashable, Codable {
     var points: [Point] { get set }
     var rects: [Rect] { get set }
     init(points: [Point])
@@ -15,11 +15,5 @@ public protocol DungeonHallway: AnyObject {
 public extension DungeonRoom where Self: CustomStringConvertible {
     var description: String {
         return rect.center.description
-    }
-}
-
-public extension DungeonRoom where Self: Hashable {
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(rect.center.description)
     }
 }

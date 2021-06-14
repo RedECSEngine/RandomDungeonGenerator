@@ -1,24 +1,30 @@
 import Foundation
 
-internal class EdgeList<T, D> where T: Hashable {
-    var vertex: Vertex<T>
-    var edges: [Edge<T, D>]?
+public struct EdgeList<
+    T: Equatable & Hashable & Codable,
+    D: Equatable & Hashable & Codable
+>: Equatable & Hashable & Codable {
+    public var vertex: Vertex<T>
+    public var edges: [Edge<T, D>]?
 
-    init(vertex: Vertex<T>) {
+    public init(vertex: Vertex<T>) {
         self.vertex = vertex
     }
 
-    func addEdge(_ edge: Edge<T, D>) {
+    public mutating func addEdge(_ edge: Edge<T, D>) {
         edges?.append(edge)
     }
 }
 
-open class AdjacencyListGraph<T, D>: CustomStringConvertible where T: Hashable {
-    internal var adjacencyList: [EdgeList<T, D>] = []
+public struct AdjacencyListGraph<
+    T: Equatable & Hashable & Codable,
+    D: Equatable & Hashable & Codable
+>: Equatable & Hashable & Codable {
+    public var adjacencyList: [EdgeList<T, D>] = []
 
-    public required init() {}
+    public init() {}
 
-    public required init(fromGraph graph: AdjacencyListGraph<T, D>) {
+    public init(fromGraph graph: AdjacencyListGraph<T, D>) {
         for edge in graph.edges {
             let from = createVertex(edge.from.data)
             let to = createVertex(edge.to.data)
@@ -27,7 +33,7 @@ open class AdjacencyListGraph<T, D>: CustomStringConvertible where T: Hashable {
         }
     }
 
-    open var vertices: [Vertex<T>] {
+    public var vertices: [Vertex<T>] {
         var vertices = [Vertex<T>]()
         for edgeList in adjacencyList {
             vertices.append(edgeList.vertex)
@@ -35,7 +41,7 @@ open class AdjacencyListGraph<T, D>: CustomStringConvertible where T: Hashable {
         return vertices
     }
 
-    open var edges: [Edge<T, D>] {
+    public var edges: [Edge<T, D>] {
         var allEdges = Set<Edge<T, D>>()
         for edgeList in adjacencyList {
             guard let edges = edgeList.edges else {
@@ -49,7 +55,7 @@ open class AdjacencyListGraph<T, D>: CustomStringConvertible where T: Hashable {
         return Array(allEdges)
     }
 
-    open func createVertex(_ data: T) -> Vertex<T> {
+    public mutating func createVertex(_ data: T) -> Vertex<T> {
         // check if the vertex already exists
         let matchingVertices = vertices.filter { vertex in
             vertex.data == data
@@ -65,17 +71,18 @@ open class AdjacencyListGraph<T, D>: CustomStringConvertible where T: Hashable {
         return vertex
     }
 
-    open func addEdge(_ from: Vertex<T>, to: Vertex<T>, data: D, withWeight weight: Double) {
+    public mutating func addEdge(_ from: Vertex<T>, to: Vertex<T>, data: D, withWeight weight: Double) {
         let edge = Edge(from: from, to: to, data: data, weight: weight)
-        let edgeList = adjacencyList[from.index]
+        var edgeList = adjacencyList[from.index]
         if edgeList.edges != nil {
             edgeList.addEdge(edge)
         } else {
             edgeList.edges = [edge]
         }
+        adjacencyList[from.index] = edgeList
     }
 
-    open func removeEdge(_ edge: Edge<T, D>) {
+    public mutating func removeEdge(_ edge: Edge<T, D>) {
         let list = adjacencyList[edge.from.index]
         if let edges = list.edges,
            let index = edges.firstIndex(of: edge)
@@ -84,13 +91,13 @@ open class AdjacencyListGraph<T, D>: CustomStringConvertible where T: Hashable {
         }
     }
 
-    open func removeAllEdges() {
+    public mutating func removeAllEdges() {
         for i in 0 ..< adjacencyList.count {
             adjacencyList[i].edges?.removeAll()
         }
     }
 
-    open func weightFrom(_ sourceVertex: Vertex<T>, to destinationVertex: Vertex<T>) -> Double {
+    public func weightFrom(_ sourceVertex: Vertex<T>, to destinationVertex: Vertex<T>) -> Double {
         guard let edges = adjacencyList[sourceVertex.index].edges else {
             return -1
         }
@@ -104,11 +111,11 @@ open class AdjacencyListGraph<T, D>: CustomStringConvertible where T: Hashable {
         return -1
     }
 
-    open func edgesFrom(_ sourceVertex: Vertex<T>) -> [Edge<T, D>] {
-        return adjacencyList[sourceVertex.index].edges ?? []
+    public func edgesFrom(_ sourceVertex: Vertex<T>) -> [Edge<T, D>] {
+        adjacencyList[sourceVertex.index].edges ?? []
     }
 
-    open var description: String {
+    public var description: String {
         var rows = [String]()
         for edgeList in adjacencyList {
             guard let edges = edgeList.edges else {

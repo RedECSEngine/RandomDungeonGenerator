@@ -2,7 +2,10 @@ import Foundation
 
 public typealias DungeonGrid = [[Int]]
 
-public class DungeonGenerator<RoomType: DungeonRoom & Equatable & Hashable, HallwayType: DungeonHallway> {
+public class DungeonGenerator<
+    RoomType: DungeonRoom,
+    HallwayType: DungeonHallway
+> {
     public var dungeonSize = Size(width: 64, height: 64)
     public var creationBounds = Size(width: 64, height: 64)
 
@@ -87,7 +90,7 @@ public class DungeonGenerator<RoomType: DungeonRoom & Equatable & Hashable, Hall
             layoutRooms.forEach {
                 otherRoom in
 
-                guard currentRoom !== otherRoom else {
+                guard currentRoom != otherRoom else {
                     return
                 }
 
@@ -122,18 +125,19 @@ public class DungeonGenerator<RoomType: DungeonRoom & Equatable & Hashable, Hall
     }
 
     public func roundRoomPositions() {
-        layoutRooms.forEach {
-            room in
+        layoutRooms = layoutRooms.map { room in
+            var newRoom = room
             let newX = ceil(room.rect.origin.x)
             let newY = ceil(room.rect.origin.y)
-            room.rect.origin = Point(x: newX, y: newY)
+            newRoom.rect.origin = Point(x: newX, y: newY)
+            return newRoom
         }
     }
 
     public func containsNoIntersectingRooms() -> Bool {
         for currentRoom in layoutRooms {
             for otherRoom in layoutRooms {
-                guard currentRoom !== otherRoom else {
+                guard currentRoom != otherRoom else {
                     continue
                 }
 
@@ -164,9 +168,16 @@ public class DungeonGenerator<RoomType: DungeonRoom & Equatable & Hashable, Hall
             return new
         }
     }
+    
+    public func generateDungeonGraph() {
+        guard dungeon == nil else { return }
 
-    public func generateGraph() -> Dungeon<RoomType, HallwayType> {
-        let graph = Dungeon<RoomType, HallwayType>()
+        let tree = minimumSpanningTreeKruskal(graph: generateUnoptimizedDungeon().graph).tree
+        dungeon = Dungeon(fromGraph: tree)
+    }
+
+    public func generateUnoptimizedDungeon() -> Dungeon<RoomType, HallwayType> {
+        var dungeon = Dungeon<RoomType, HallwayType>()
         let connectableRoomRadius = (maxRoomSpacing / 2)
         let connectedRooms = layoutRooms.reduce([:]) {
             connections, currentRoom -> [RoomType: [RoomType]] in
@@ -176,7 +187,7 @@ public class DungeonGenerator<RoomType: DungeonRoom & Equatable & Hashable, Hall
             let pairings: [RoomType] = layoutRooms.compactMap {
                 otherRoom in
 
-                guard currentRoom !== otherRoom else { return nil }
+                guard currentRoom != otherRoom else { return nil }
 
                 var otherRoomReach = Circle(fittedTo: otherRoom.rect)
                 otherRoomReach.radius += connectableRoomRadius
@@ -202,93 +213,103 @@ public class DungeonGenerator<RoomType: DungeonRoom & Equatable & Hashable, Hall
             currentRoom, connectedRooms in
 
             finalRooms.append(currentRoom)
-            let currentVertex = graph.createVertex(currentRoom)
+            let currentVertex = dungeon.graph.createVertex(currentRoom)
             connectedRooms.forEach {
                 otherRoom in
-                let otherVertex = graph.createVertex(otherRoom)
+                let otherVertex = dungeon.graph.createVertex(otherRoom)
                 let hallway = HallwayType(points: [])
-                graph.addEdge(currentVertex, to: otherVertex, data: hallway, withWeight: currentRoom.rect.center.distanceFrom(otherRoom.rect.center))
+                dungeon.graph.addEdge(currentVertex, to: otherVertex, data: hallway, withWeight: currentRoom.rect.center.distanceFrom(otherRoom.rect.center))
             }
         }
         layoutRooms = finalRooms
 
-        return graph
-    }
-
-    public func generateDungeonGraph() {
-        guard dungeon == nil else { return }
-
-        let tree = minimumSpanningTreeKruskal(graph: generateGraph()).tree
-        dungeon = Dungeon(fromGraph: tree)
+        return dungeon
     }
 
     public func generateHallways() {
         generateDungeonGraph()
         generateLineHallways()
-        dungeon.hallways.forEach {
-            hallway in
+        
+        dungeon.graph.adjacencyList = dungeon.graph.adjacencyList.map { edgeList in
+            var newEdgeList = edgeList
+            newEdgeList.edges = newEdgeList.edges?.map { edge in
+                var newHallway = edge.data
+                var newEdge = edge
+                
+                let lineSet = newHallway.points
 
-            let lineSet = hallway.points
+                guard lineSet.count >= 2 else { return edge }
 
-            guard lineSet.count >= 2 else { return }
+                let firstLine = (lineSet[0].roundedUp(), lineSet[1].roundedUp())
+                let verticalDiff = firstLine.0.diffOf(firstLine.1)
+                let verticalDirection = Direction.fromPoint(verticalDiff)
+                let roundedHalfWidth = ceil(hallwayWidth / 2)
 
-            let firstLine = (lineSet[0].roundedUp(), lineSet[1].roundedUp())
-            let verticalDiff = firstLine.0.diffOf(firstLine.1)
-            let verticalDirection = Direction.fromPoint(verticalDiff)
-            let roundedHalfWidth = ceil(hallwayWidth / 2)
+                // vertical hallways are first
+                if verticalDirection == .down {
+                    let origin = firstLine.0.offsetBy(x: -roundedHalfWidth, y: 0)
+                    let rect = Rect(origin: origin, size: Size(width: hallwayWidth, height: firstLine.0.distanceFrom(firstLine.1)))
+                    newHallway.rects.append(rect)
+                } else {
+                    let origin = firstLine.1.offsetBy(x: -roundedHalfWidth, y: 0)
+                    let rect = Rect(origin: origin, size: Size(width: hallwayWidth, height: firstLine.0.distanceFrom(firstLine.1)))
+                    newHallway.rects.append(rect)
+                }
+                
+                guard lineSet.count >= 3 else {
+                    newEdge.data = newHallway
+                    return newEdge
+                }
 
-            // vertical hallways are first
-            if verticalDirection == .down {
-                let origin = firstLine.0.offsetBy(x: -roundedHalfWidth, y: 0)
-                let rect = Rect(origin: origin, size: Size(width: hallwayWidth, height: firstLine.0.distanceFrom(firstLine.1)))
-                hallway.rects.append(rect)
-            } else {
-                let origin = firstLine.1.offsetBy(x: -roundedHalfWidth, y: 0)
-                let rect = Rect(origin: origin, size: Size(width: hallwayWidth, height: firstLine.0.distanceFrom(firstLine.1)))
-                hallway.rects.append(rect)
+                let secondLine = (lineSet[1].roundedUp(), lineSet[2].roundedUp())
+                let horizontalDiff = secondLine.0.diffOf(secondLine.1)
+                let horizontalDirection = Direction.fromPoint(horizontalDiff)
+
+                // horizontal comes second
+                if horizontalDirection == .left {
+                    let origin = secondLine.0.offsetBy(x: 0, y: -roundedHalfWidth)
+                    let rect = Rect(origin: origin, size: Size(width: secondLine.0.distanceFrom(secondLine.1), height: hallwayWidth))
+                    newHallway.rects.append(rect)
+                } else {
+                    let origin = secondLine.1.offsetBy(x: 0, y: -roundedHalfWidth)
+                    let rect = Rect(origin: origin, size: Size(width: secondLine.0.distanceFrom(secondLine.1), height: hallwayWidth))
+                    newHallway.rects.append(rect)
+                }
+                
+                newEdge.data = newHallway
+                
+                return newEdge
             }
-
-            guard lineSet.count >= 3 else {
-                return
-            }
-
-            let secondLine = (lineSet[1].roundedUp(), lineSet[2].roundedUp())
-            let horizontalDiff = secondLine.0.diffOf(secondLine.1)
-            let horizontalDirection = Direction.fromPoint(horizontalDiff)
-
-            // horizontal comes second
-            if horizontalDirection == .left {
-                let origin = secondLine.0.offsetBy(x: 0, y: -roundedHalfWidth)
-                let rect = Rect(origin: origin, size: Size(width: secondLine.0.distanceFrom(secondLine.1), height: hallwayWidth))
-                hallway.rects.append(rect)
-            } else {
-                let origin = secondLine.1.offsetBy(x: 0, y: -roundedHalfWidth)
-                let rect = Rect(origin: origin, size: Size(width: secondLine.0.distanceFrom(secondLine.1), height: hallwayWidth))
-                hallway.rects.append(rect)
-            }
+            return edgeList
         }
     }
 
     public func generateLineHallways() {
-        dungeon.edges.forEach {
-            edge in
+        dungeon.graph.adjacencyList = dungeon.graph.adjacencyList.map { edgeList in
+            var newEdgeList = edgeList
+            newEdgeList.edges = newEdgeList.edges?.map { edge in
+                var newEdge = edge
+                
+                let fromRoom = edge.from.data
+                let toRoom = edge.to.data
 
-            let fromRoom = edge.from.data
-            let toRoom = edge.to.data
+                let lineOrigin = fromRoom.rect.center
+                newEdge.data.points.append(lineOrigin)
 
-            let lineOrigin = fromRoom.rect.center
-            edge.data.points.append(lineOrigin)
+                let positionDiff = toRoom.rect.center.diffOf(lineOrigin)
+                let verticalLinePoint = lineOrigin.offsetBy(Point(x: 0, y: positionDiff.y))
+                newEdge.data.points.append(verticalLinePoint)
 
-            let positionDiff = toRoom.rect.center.diffOf(lineOrigin)
-            let verticalLinePoint = lineOrigin.offsetBy(Point(x: 0, y: positionDiff.y))
-            edge.data.points.append(verticalLinePoint)
+                if toRoom.rect.intersects(line: (lineOrigin, verticalLinePoint)) {
+                    return newEdge
+                }
 
-            if toRoom.rect.intersects(line: (lineOrigin, verticalLinePoint)) {
-                return
+                let horizontalLinePoint = verticalLinePoint.offsetBy(Point(x: positionDiff.x, y: 0))
+                newEdge.data.points.append(horizontalLinePoint)
+                
+                return newEdge
             }
-
-            let horizontalLinePoint = verticalLinePoint.offsetBy(Point(x: positionDiff.x, y: 0))
-            edge.data.points.append(horizontalLinePoint)
+            return newEdgeList
         }
     }
 

@@ -1,8 +1,10 @@
 import Foundation
 
-func minimumSpanningTreeKruskal<T, D>(graph: AdjacencyListGraph<T, D>) -> (cost: Double, tree: AdjacencyListGraph<T, D>) {
+func minimumSpanningTreeKruskal<T, D>(
+    graph: AdjacencyListGraph<T, D>
+) -> (cost: Double, tree: AdjacencyListGraph<T, D>) {
     var cost: Double = 0
-    let tree = AdjacencyListGraph<T, D>(fromGraph: graph)
+    var tree = AdjacencyListGraph<T, D>(fromGraph: graph)
     tree.removeAllEdges()
     let sortedEdgeListByWeight = graph.edges.sorted(by: { $0.weight < $1.weight })
 

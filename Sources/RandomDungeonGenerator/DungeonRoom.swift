@@ -1,5 +1,6 @@
 import Foundation
 import SpriteKit
+import Geometry
 
 public protocol DungeonRoom: Equatable, Hashable, Codable {
     var rect: Rect { get set }

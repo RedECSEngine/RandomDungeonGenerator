@@ -1,4 +1,5 @@
 import Foundation
+import Geometry
 
 public struct Dungeon<
     RoomType: DungeonRoom,
@@ -41,5 +42,33 @@ public struct Dungeon<
     
     public func randomRoomIndex() -> Int? {
         graph.adjacencyList.indices.randomElement()
+    }
+    
+    public func create2DGrid(size: Size) -> [[Int]] {
+        let row: [Int] = Array(repeating: 0, count: Int(size.width))
+        var grid: [[Int]] = Array(repeating: row, count: Int(size.height))
+
+        let rects = rooms.map { $0.rect } + hallways.flatMap { $0.rects }
+
+        for rect in rects {
+            let initialX = Int(rect.origin.x)
+            let maxX = Int(rect.origin.x + rect.size.width)
+            let initialY = Int(rect.origin.y)
+            let maxY = Int(rect.origin.y + rect.size.height)
+
+            for x in initialX ..< maxX {
+                if x >= Int(size.width) {
+                    break
+                }
+                for y in initialY ..< maxY {
+                    if y >= Int(size.height) {
+                        break
+                    }
+                    grid[y][x] = 1
+                }
+            }
+        }
+        
+        return grid
     }
 }

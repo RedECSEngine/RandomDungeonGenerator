@@ -318,31 +318,9 @@ public class DungeonGenerator<
         guard self.grid.isEmpty else {
             return self.grid
         }
-
-        let row: [Int] = Array(repeating: 0, count: Int(dungeonSize.width))
-        var grid: [[Int]] = Array(repeating: row, count: Int(dungeonSize.height))
-
-        let rects = layoutRooms.map { $0.rect } + dungeon.hallways.flatMap { $0.rects }
-
-        for rect in rects {
-            let initialX = Int(rect.origin.x)
-            let maxX = Int(rect.origin.x + rect.size.width)
-            let initialY = Int(rect.origin.y)
-            let maxY = Int(rect.origin.y + rect.size.height)
-
-            for x in initialX ..< maxX {
-                if x >= Int(dungeonSize.width) {
-                    break
-                }
-                for y in initialY ..< maxY {
-                    if y >= Int(dungeonSize.height) {
-                        break
-                    }
-                    grid[y][x] = 1
-                }
-            }
-        }
-
+        
+        let grid = dungeon.create2DGrid(size: dungeonSize)
+        
         self.grid = grid
 
         return self.grid

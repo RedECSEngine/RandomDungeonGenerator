@@ -1,5 +1,6 @@
 import Foundation
 import Geometry
+import Graphs
 
 public struct Dungeon<
     RoomType: DungeonRoom,

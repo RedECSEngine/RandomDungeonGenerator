@@ -1,5 +1,6 @@
 import Foundation
 import Geometry
+import Graphs
 
 public typealias DungeonGrid = [[Int]]
 

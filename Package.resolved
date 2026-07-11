@@ -2,6 +2,33 @@
   "object": {
     "pins": [
       {
+        "package": "Geometry",
+        "repositoryURL": "https://github.com/RedECSEngine/Geometry.git",
+        "state": {
+          "branch": null,
+          "revision": "90247082d2e42f726a6e6a17a877b3ad9a059629",
+          "version": "0.0.5"
+        }
+      },
+      {
+        "package": "Graphs",
+        "repositoryURL": "https://github.com/RedECSEngine/Graphs.git",
+        "state": {
+          "branch": null,
+          "revision": "296932aeeea06e5321a8e6e85d935e2ea9544704",
+          "version": "0.0.1"
+        }
+      },
+      {
+        "package": "swift-numerics",
+        "repositoryURL": "https://github.com/apple/swift-numerics.git",
+        "state": {
+          "branch": null,
+          "revision": "0c0290ff6b24942dadb83a929ffaaa1481df04a2",
+          "version": "1.1.1"
+        }
+      },
+      {
         "package": "SwiftFormat",
         "repositoryURL": "https://github.com/nicklockwood/SwiftFormat.git",
         "state": {

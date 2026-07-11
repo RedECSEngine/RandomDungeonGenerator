@@ -1,13 +1,11 @@
-import Foundation
-import SpriteKit
 import Geometry
 
-public protocol DungeonRoom: Equatable, Hashable, Codable {
+public protocol DungeonRoom: Hashable, Codable {
     var rect: Rect { get set }
     init(rect: Rect)
 }
 
-public protocol DungeonHallway: Equatable, Hashable, Codable {
+public protocol DungeonHallway: Hashable, Codable {
     var points: [Point] { get set }
     var rects: [Rect] { get set }
     init(points: [Point])

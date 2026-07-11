@@ -1,4 +1,3 @@
-import Foundation
 import Geometry
 import Graphs
 
@@ -32,7 +31,6 @@ public class DungeonGenerator<
     public init() {}
 
     public func runCompleteGeneration() {
-        let startTime = Date()
         generateRooms()
 
         while containsNoIntersectingRooms() == false {
@@ -47,11 +45,6 @@ public class DungeonGenerator<
         }
 
         generateHallways()
-
-        let endTime = Date()
-
-        let difference = endTime.timeIntervalSince(startTime)
-        print("Dungeon generated in \(difference) seconds")
     }
 
     public func generateRooms() {
@@ -62,10 +55,16 @@ public class DungeonGenerator<
             let offsetX = (dungeonSize.width - creationBounds.width) / 2
             let offsetY = (dungeonSize.height - creationBounds.height) / 2
 
-            let x = offsetX + Double(arc4random_uniform(UInt32(creationBounds.width)))
-            let y = offsetY + Double(arc4random_uniform(UInt32(creationBounds.height)))
-            let width = floor(minimumRoomWidth + Double(arc4random_uniform(UInt32(maximumRoomWidth - minimumRoomWidth))))
-            let height = floor(minimumRoomHeight + Double(arc4random_uniform(UInt32(maximumRoomHeight - minimumRoomHeight))))
+            let x = offsetX + Double.random(in: 0..<creationBounds.width)
+            let y = offsetY + Double.random(in: 0..<creationBounds.height)
+            let width = (
+                minimumRoomWidth +
+                Double.random(in: 0..<maximumRoomWidth - minimumRoomWidth)
+            ).rounded(.down)
+            let height = (
+                minimumRoomHeight +
+                Double.random(in: 0..<maximumRoomHeight - minimumRoomHeight)
+            ).rounded(.down)
 
             let position = Point(x: x, y: y)
             let size = Size(width: width, height: height)
@@ -129,8 +128,8 @@ public class DungeonGenerator<
     public func roundRoomPositions() {
         layoutRooms = layoutRooms.map { room in
             var newRoom = room
-            let newX = ceil(room.rect.origin.x)
-            let newY = ceil(room.rect.origin.y)
+            let newX = room.rect.origin.x.rounded(.up)
+            let newY = room.rect.origin.y.rounded(.up)
             newRoom.rect.origin = Point(x: newX, y: newY)
             return newRoom
         }
@@ -245,7 +244,7 @@ public class DungeonGenerator<
                 let firstLine = (lineSet[0].roundedUp(), lineSet[1].roundedUp())
                 let verticalDiff = firstLine.0.diffOf(firstLine.1)
                 let verticalDirection = Direction.fromPoint(verticalDiff)
-                let roundedHalfWidth = ceil(hallwayWidth / 2)
+                let roundedHalfWidth = (hallwayWidth / 2).rounded(.up)
 
                 // vertical hallways are first
                 if verticalDirection == .down {

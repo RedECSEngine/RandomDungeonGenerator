@@ -1,4 +1,3 @@
-import Foundation
 import Geometry
 
 public struct DefaultDungeonRoom: DungeonRoom, CustomStringConvertible {

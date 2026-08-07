@@ -1,5 +1,6 @@
 import Geometry
 import Graphs
+import Randomization
 
 public typealias DungeonGrid = [[Int]]
 
@@ -21,6 +22,8 @@ public class DungeonGenerator<
     public var initialRoomCreationCount: Int = 30
     public var maximumStepsBeforeRetry: Int = 50
 
+    public var randomNumberGenerator: any RandomNumberGenerator = SystemRandomNumberGenerator()
+
     public var dungeon: Dungeon<RoomType, HallwayType>!
 
     public var layoutRooms: [RoomType] = []
@@ -29,6 +32,11 @@ public class DungeonGenerator<
     fileprivate(set) var numberOfStepsTaken = 0
 
     public init() {}
+
+    public func runCompleteGeneration(seed: UInt64) {
+        randomNumberGenerator = SeededRandomNumberGenerator(seed: seed)
+        runCompleteGeneration()
+    }
 
     public func runCompleteGeneration() {
         generateRooms()
@@ -55,15 +63,15 @@ public class DungeonGenerator<
             let offsetX = (dungeonSize.width - creationBounds.width) / 2
             let offsetY = (dungeonSize.height - creationBounds.height) / 2
 
-            let x = offsetX + Double.random(in: 0..<creationBounds.width)
-            let y = offsetY + Double.random(in: 0..<creationBounds.height)
+            let x = offsetX + Double.random(in: 0..<creationBounds.width, using: &randomNumberGenerator)
+            let y = offsetY + Double.random(in: 0..<creationBounds.height, using: &randomNumberGenerator)
             let width = (
                 minimumRoomWidth +
-                Double.random(in: 0..<maximumRoomWidth - minimumRoomWidth)
+                Double.random(in: 0..<maximumRoomWidth - minimumRoomWidth, using: &randomNumberGenerator)
             ).rounded(.down)
             let height = (
                 minimumRoomHeight +
-                Double.random(in: 0..<maximumRoomHeight - minimumRoomHeight)
+                Double.random(in: 0..<maximumRoomHeight - minimumRoomHeight, using: &randomNumberGenerator)
             ).rounded(.down)
 
             let position = Point(x: x, y: y)

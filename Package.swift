@@ -1,4 +1,4 @@
-// swift-tools-version:5.3
+// swift-tools-version:5.6
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -20,14 +20,19 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/nicklockwood/SwiftFormat.git", from: "0.47.7"),
         .package(url: "https://github.com/RedECSEngine/Geometry.git", from: "0.0.5"),
-        .package(url: "https://github.com/RedECSEngine/Graphs.git", from: "0.0.1")
+        .package(url: "https://github.com/RedECSEngine/Graphs.git", from: "0.0.1"),
+        .package(url: "https://github.com/RedECSEngine/Randomization.git", exact: "0.0.1")
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
         // Targets can depend on other targets in this package, and on products in packages this package depends on.
         .target(
             name: "RandomDungeonGenerator",
-            dependencies: ["Geometry", .product(name: "Graphs", package: "Graphs")]
+            dependencies: [
+                "Geometry",
+                .product(name: "Graphs", package: "Graphs"),
+                .product(name: "Randomization", package: "Randomization")
+            ]
         ),
         .testTarget(
             name: "RandomDungeonGeneratorTests",

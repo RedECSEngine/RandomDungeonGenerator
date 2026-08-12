@@ -45,6 +45,7 @@ public class DungeonGenerator<
     public private(set) var layoutRooms: [RoomType] = []
     public var initialRooms: [RoomType]?
     public var lastSeed: UInt64 = 0
+    public var useMinimumSpanningTreeForLayout: Bool = true
     
     fileprivate var grid: [[Int]] = []
 
@@ -255,9 +256,13 @@ public class DungeonGenerator<
 
     public func generateDungeonGraph() {
         guard dungeon == nil else { return }
-
-        let tree = minimumSpanningTreeKruskal(graph: generateUnoptimizedDungeon().graph).tree
-        dungeon = Dungeon(fromGraph: tree)
+        let originalGraph = generateUnoptimizedDungeon().graph
+        if useMinimumSpanningTreeForLayout {
+            let minimumSpanningGraph = minimumSpanningTreeKruskal(graph: originalGraph).tree
+            dungeon = Dungeon(fromGraph: minimumSpanningGraph)
+        } else {
+            dungeon = Dungeon(fromGraph: originalGraph)
+        }
     }
 
     public func generateUnoptimizedDungeon() -> Dungeon<RoomType, HallwayType> {

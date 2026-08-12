@@ -34,7 +34,7 @@ public class DungeonGenerator<
     public var hallwayWidth: Double = 4.0
 
     public var initialRoomCreationCount: Int = 30
-    public var maximumStepsBeforeRetry: Int = 50
+    public var maximumStepsBeforeRetry: Int = 200
 
     public var randomNumberGenerator: any RandomNumberGenerator = SystemRandomNumberGenerator()
 
@@ -48,7 +48,8 @@ public class DungeonGenerator<
     
     fileprivate var grid: [[Int]] = []
 
-    fileprivate(set) var numberOfStepsTaken = 0
+    public fileprivate(set) var numberOfStepsTaken = 0
+    public fileprivate(set) var totalNumberOfStepsTakenAcrossAttempts = 0
 
     public init() {}
     
@@ -60,6 +61,7 @@ public class DungeonGenerator<
     
     public func reset() {
         numberOfStepsTaken = 0
+        totalNumberOfStepsTakenAcrossAttempts = 0
         dungeon = nil
         state = .initialState
         layoutRooms = []
@@ -153,10 +155,13 @@ public class DungeonGenerator<
 
     public func applyFittingStep() {
         if numberOfStepsTaken > maximumStepsBeforeRetry {
+            let totalSteps = totalNumberOfStepsTakenAcrossAttempts
             reset()
+            totalNumberOfStepsTakenAcrossAttempts = totalSteps
         }
 
         numberOfStepsTaken += 1
+        totalNumberOfStepsTakenAcrossAttempts += 1
         removeRoomsOutOfBounds()
         layoutRooms = layoutRooms.map {
             currentRoom in
@@ -177,7 +182,7 @@ public class DungeonGenerator<
                     return
                 }
 
-                let diffPos = paddedRect.origin.diffOf(otherRoom.rect.origin)
+                let diffPos = currentRoom.rect.origin.diffOf(otherRoom.rect.origin)
 
                 velocityX += diffPos.x
                 velocityY += diffPos.y
@@ -187,9 +192,6 @@ public class DungeonGenerator<
             guard neighborCount > 0 else {
                 return currentRoom
             }
-
-            velocityX /= Double(neighborCount)
-            velocityY /= Double(neighborCount)
 
             velocityX = velocityX / currentRoom.rect.diagonalLength
             velocityY = velocityY / currentRoom.rect.diagonalLength
@@ -237,9 +239,17 @@ public class DungeonGenerator<
     public func removeRoomsOutOfBounds() {
         // inset dungeon rect to prevent rooms on edges
         let dungeonRect = Rect(origin: Point(x: 0, y: 0), size: dungeonSize).inset(by: 1)
-        layoutRooms = layoutRooms.filter {
-            room -> Bool in
-            dungeonRect.contains(room.rect)
+        layoutRooms = layoutRooms.map { room in
+            if !dungeonRect.contains(room.rect) {
+                let offsetX = (dungeonSize.width - creationBounds.width) / 2
+                let offsetY = (dungeonSize.height - creationBounds.height) / 2
+                let x = offsetX + Double.random(in: 0..<creationBounds.width, using: &randomNumberGenerator)
+                let y = offsetY + Double.random(in: 0..<creationBounds.height, using: &randomNumberGenerator)
+                var newRoom = room
+                newRoom.rect.origin = Point(x: x, y: y)
+                return newRoom
+            }
+            return room
         }
     }
 

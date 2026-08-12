@@ -1,5 +1,6 @@
 import Geometry
 import Graphs
+import OrderedCollections
 import Randomization
 
 public typealias DungeonGrid = [[Int]]
@@ -18,13 +19,12 @@ public class DungeonGenerator<
     RoomType: DungeonRoom,
     HallwayType: DungeonHallway
 >: Equatable {
-    public static func == (lhs: DungeonGenerator, rhs: DungeonGenerator) -> Bool {
-        return lhs === rhs
-    }
     
+    private var randomNumberGenerator: any RandomNumberGenerator = SystemRandomNumberGenerator()
+    
+    // MARK: Settings
     public var dungeonSize = Size(width: 64, height: 64)
     public var creationBounds = Size(width: 64, height: 64)
-
     public var minimumRoomWidth: Double = 5
     public var maximumRoomWidth: Double = 14
     public var minimumRoomHeight: Double = 5
@@ -36,23 +36,31 @@ public class DungeonGenerator<
     public var initialRoomCreationCount: Int = 30
     public var maximumStepsBeforeRetry: Int = 200
 
-    public var randomNumberGenerator: any RandomNumberGenerator = SystemRandomNumberGenerator()
-
-    public var state: DungeonGeneratorState = .initialState
-    
-    public var dungeon: Dungeon<RoomType, HallwayType>!
-
-    public private(set) var layoutRooms: [RoomType] = []
     public var initialRooms: [RoomType]?
-    public var lastSeed: UInt64 = 0
     public var useMinimumSpanningTreeForLayout: Bool = true
-    
+    public private(set) var lastSeed: UInt64 = 0
+
+    // MARK: Intermediary State during generation
+    public private(set) var state: DungeonGeneratorState = .initialState
+    public private(set) var groupedRooms: OrderedSet<DungeonSegmentID> = []
+    public private(set) var groupings: OrderedDictionary<DungeonSegmentID, DungeonGrouping> = [:]
+    public private(set) var layoutRooms: [RoomType] = [] // TODO: make ordered set
+    public private(set) var numberOfStepsTaken = 0
+    public private(set) var totalNumberOfStepsTakenAcrossAttempts = 0
+    public private(set) var groupingGraph: AdjacencyListGraph<DungeonSegmentID, Int> = .init()
+    public private(set) var groupingGraphRootIndex: Int?
+
+    // MARK: Final outcome data
+    public var dungeon: Dungeon<RoomType, HallwayType>!
     fileprivate var grid: [[Int]] = []
 
-    public fileprivate(set) var numberOfStepsTaken = 0
-    public fileprivate(set) var totalNumberOfStepsTakenAcrossAttempts = 0
-
-    public init() {}
+    public init(_ seed: UInt64? = nil) {
+        if let seed {
+            setSeed(seed)
+        } else {
+            setSeed(randomNumberGenerator.next()) // Pick a random number, but use our SeededNumberGenerator so it's reproducible always, if we record the seed used
+        }
+    }
     
     public func setSeed(_ seed: UInt64) {
         lastSeed = seed
@@ -117,7 +125,7 @@ public class DungeonGenerator<
             layoutRooms = initialRooms
         } else {
             layoutRooms = (0 ..< initialRoomCreationCount).map {
-                _ in
+                index in
                 let width = (
                     minimumRoomWidth +
                     Double.random(in: 0..<maximumRoomWidth - minimumRoomWidth, using: &randomNumberGenerator)
@@ -128,7 +136,7 @@ public class DungeonGenerator<
                 ).rounded(.down)
                 let size = Size(width: width, height: height)
                 let rect = Rect(origin: .zero, size: size)
-                return RoomType(rect: rect)
+                return RoomType(id: "room-\(index)", rect: rect)
             }
         }
     }
@@ -166,6 +174,10 @@ public class DungeonGenerator<
         removeRoomsOutOfBounds()
         layoutRooms = layoutRooms.map {
             currentRoom in
+            
+//            guard !groupedRooms.contains(currentRoom.id) else {
+//                return currentRoom // dont modify room position once it is grouped
+//            }
 
             var velocityX: Double = 0
             var velocityY: Double = 0
@@ -177,6 +189,20 @@ public class DungeonGenerator<
                 guard currentRoom != otherRoom else {
                     return
                 }
+                
+//                var offsetForOtherRoom = Point.zero
+//                if !groupedRooms.contains(otherRoom.id), let rootIndex = groupingGraphRootIndex {
+//                    let edgeList = groupingGraph.adjacencyList[rootIndex]
+//                    let rootGroupingId = edgeList.vertex.data
+//                    if let grouping = groupings[rootGroupingId] {
+//                        offsetForOtherRoom += grouping.offset
+//                        if grouping.from == otherRoom.id {
+//                            groupings[grouping.from] != nil
+//                        } else if grouping.to == otherRoom.id {
+//                            
+//                        }
+//                    }
+//                }
 
                 let paddedRect = currentRoom.rect.inset(by: -minimumRoomSpacing)
                 guard paddedRect.intersects(otherRoom.rect) else {
@@ -253,6 +279,10 @@ public class DungeonGenerator<
             return room
         }
     }
+    
+    public func identifyConnections() {
+        // TODO:
+    }
 
     public func generateDungeonGraph() {
         guard dungeon == nil else { return }
@@ -300,13 +330,16 @@ public class DungeonGenerator<
 
         var finalRooms: [RoomType] = []
         finalRooms.reserveCapacity(connectedRooms.count)
+        var index: Int = 0
         for (currentRoom, pairings) in connectedRooms {
             finalRooms.append(currentRoom)
             let currentVertex = dungeon.graph.createVertex(currentRoom)
             for otherRoom in pairings {
+                index += 1
                 let otherVertex = dungeon.graph.createVertex(otherRoom)
                 // start with abstract hallways that aren't sized or connected to anything yet
                 let hallway = HallwayType(
+                    id: "hallway-\(currentRoom.id)-\(otherRoom.id)-\(index)",
                     type: .corner,
                     from: .closed,
                     to: .closed
@@ -384,9 +417,11 @@ public class DungeonGenerator<
     }
 
     public func generateLineHallways() {
+        var index = 0
         dungeon.graph.adjacencyList = dungeon.graph.adjacencyList.map { edgeList in
             var newEdgeList = edgeList
             newEdgeList.edges = newEdgeList.edges?.map { edge in
+                index += 1
                 var newEdge = edge
                 
                 let fromRoom = edge.from.room
@@ -410,24 +445,30 @@ public class DungeonGenerator<
                     return edge // couldn't find a way to line them up
                 }
                 
+                let id = "\(index)-hallway-\(fromRoom.id)-\(toRoom.id)"
                 let positionDiff = fromJoint.position.diffOf(toJoint.position)
                 if positionDiff.x != 0 && positionDiff.y != 0 {
                     // we need a corner hallway
-                    newEdge.hallway = HallwayType(type: .corner, from: fromJoint, to: toJoint)
+                    newEdge.hallway = HallwayType(
+                        id: id,
+                        type: .corner,
+                        from: fromJoint,
+                        to: toJoint
+                    )
                 }
                 else if positionDiff.y > 0 {
                     // north joint on origin must have Y > south joint
-                    newEdge.hallway = HallwayType(type: .northSouth, from: fromJoint, to: toJoint)
+                    newEdge.hallway = HallwayType(id: id, type: .northSouth, from: fromJoint, to: toJoint)
                 } else if positionDiff.x < 0 {
                     // east joint on origin must have X < west joint
-                    newEdge.hallway = HallwayType(type: .eastWest, from: fromJoint, to: toJoint)
+                    newEdge.hallway = HallwayType(id: id, type: .eastWest, from: fromJoint, to: toJoint)
                 }
                 else if positionDiff.y < 0 {
                    // south < north
-                    newEdge.hallway = HallwayType(type: .northSouth, from: toJoint, to: fromJoint)
+                    newEdge.hallway = HallwayType(id: id, type: .northSouth, from: toJoint, to: fromJoint)
                 } else if positionDiff.x > 0 {
                     // west > east
-                    newEdge.hallway = HallwayType(type: .eastWest, from: toJoint, to: fromJoint)
+                    newEdge.hallway = HallwayType(id: id, type: .eastWest, from: toJoint, to: fromJoint)
                 }
                 
                 return newEdge
@@ -446,5 +487,9 @@ public class DungeonGenerator<
         self.grid = grid
 
         return self.grid
+    }
+    
+    public static func == (lhs: DungeonGenerator, rhs: DungeonGenerator) -> Bool {
+        return lhs === rhs
     }
 }

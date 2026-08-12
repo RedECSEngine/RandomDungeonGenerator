@@ -1,11 +1,8 @@
 import Geometry
 
-
 public protocol DungeonRoom: DungeonSegment {
     var rect: Rect { get set }
-    var joints: [DungeonJoint] { get }
-
-    init(rect: Rect)
+    init(id: String, rect: Rect)
 }
 
 public extension DungeonRoom where Self: CustomStringConvertible {
@@ -15,6 +12,7 @@ public extension DungeonRoom where Self: CustomStringConvertible {
 }
 
 public struct DefaultDungeonRoom: DungeonRoom, CustomStringConvertible {
+    public var id: String
     
     public var joints: [DungeonJoint] {
         [
@@ -28,7 +26,8 @@ public struct DefaultDungeonRoom: DungeonRoom, CustomStringConvertible {
     public var rect: Rect
     public var rects: [Rect] { [rect] }
 
-    public init(rect: Rect) {
+    public init(id: String, rect: Rect) {
+        self.id = id
         self.rect = rect
     }
 }

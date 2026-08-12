@@ -1,6 +1,9 @@
 import Geometry
 
-public protocol DungeonSegment: Hashable, Codable {
+public typealias DungeonSegmentID = String
+
+public protocol DungeonSegment: Hashable, Codable, Identifiable {
+    var id: DungeonSegmentID { get }
     var joints: [DungeonJoint] { get }
     var rects: [Rect] { get }
 }

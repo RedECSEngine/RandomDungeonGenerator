@@ -12,10 +12,11 @@ public protocol DungeonHallway: DungeonSegment {
     var stretchEastWest: [Rect]? { get } // implicitly true for each direction
     var stretchNorthSouth: [Rect]? { get } // implicitly handled via multiple rects going different directions
     
-    init(type: DungeonHallwayType, from: DungeonJoint, to: DungeonJoint)
+    init(id: String, type: DungeonHallwayType, from: DungeonJoint, to: DungeonJoint)
 }
 
 public struct DefaultDungeonHallway: DungeonHallway, Equatable, Hashable, Codable {
+    public var id: String
     public var rects: [Rect] = []
     public var joints: [DungeonJoint] = []
     public var stretchEastWest: [Rect]?
@@ -30,7 +31,8 @@ public struct DefaultDungeonHallway: DungeonHallway, Equatable, Hashable, Codabl
         hasher.combine(rects)
     }
 
-    public init(type: DungeonHallwayType, from: DungeonJoint, to: DungeonJoint) {
+    public init(id: String, type: DungeonHallwayType, from: DungeonJoint, to: DungeonJoint) {
+        self.id = id
         self.joints = [from, to]
         switch type {
         case .northSouth:

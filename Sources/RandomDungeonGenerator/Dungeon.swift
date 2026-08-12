@@ -1,6 +1,22 @@
 import Geometry
 import Graphs
 
+public typealias DefaultDungeon = Dungeon<DefaultDungeonRoom, DefaultDungeonHallway>
+
+public extension Vertex where VertexType: DungeonRoom {
+    var room: VertexType {
+        get { data }
+        set { data = newValue }
+    }
+}
+
+public extension Edge where VertexType: DungeonRoom, EdgeType: DungeonHallway {
+    var hallway: EdgeType {
+        get { data }
+        set { data = newValue }
+    }
+}
+
 public struct Dungeon<
     RoomType: DungeonRoom,
     HallwayType: DungeonHallway
@@ -9,15 +25,15 @@ public struct Dungeon<
     public var graph: AdjacencyListGraph<RoomType, HallwayType>
     
     public subscript(room roomIndex: Int) -> RoomType {
-        graph.adjacencyList[roomIndex].vertex.data
+        graph.adjacencyList[roomIndex].vertex.room
     }
     
     public var rooms: [RoomType] {
-        return graph.adjacencyList.map { $0.vertex.data }
+        return graph.adjacencyList.map { $0.vertex.room }
     }
 
     public var hallways: [HallwayType] {
-        return graph.edges.map { $0.data }
+        return graph.edges.map { $0.hallway }
     }
     
     public var firstRoomIndex: Int {
@@ -37,7 +53,7 @@ public struct Dungeon<
     }
     
     public mutating func modifyRoomData(at index: Int, modifier: (inout RoomType) -> Void) {
-        modifier(&graph.adjacencyList[index].vertex.data)
+        modifier(&graph.adjacencyList[index].vertex.room)
     }
     
     public func randomRoomIndex() -> Int? {

@@ -19,8 +19,13 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/nicklockwood/SwiftFormat.git", from: "0.47.7"),
-        .package(url: "https://github.com/RedECSEngine/Geometry.git", from: "0.0.5"),
-        .package(url: "https://github.com/RedECSEngine/Graphs.git", from: "0.0.1"),
+        
+//        .package(url: "https://github.com/RedECSEngine/Geometry.git", from: "0.0.5"),
+        .package(path: "../Geometry"),
+
+//        .package(url: "https://github.com/RedECSEngine/Graphs.git", from: "0.0.1"),
+        .package(path: "../swift-graphs"),
+        
         .package(url: "https://github.com/RedECSEngine/Randomization.git", exact: "0.0.1")
     ],
     targets: [
@@ -30,7 +35,7 @@ let package = Package(
             name: "RandomDungeonGenerator",
             dependencies: [
                 "Geometry",
-                .product(name: "Graphs", package: "Graphs"),
+                .product(name: "Graphs", package: "swift-graphs"),
                 .product(name: "Randomization", package: "Randomization")
             ]
         ),

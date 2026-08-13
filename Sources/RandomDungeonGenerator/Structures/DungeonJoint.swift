@@ -4,7 +4,9 @@ public struct DungeonJoint: Hashable, Codable {
     public var position: Point
     public var direction: DungeonJointDirections
     
-    public static let closed = DungeonJoint(position: .zero, direction: .none)
+    /// Representation of a joint that is occupies no space, functions like a glue for relationships.
+    /// Evaluated like a special case
+    public static let nonSpatial = DungeonJoint(position: .zero, direction: .none)
     
     public init(position: Point, direction: DungeonJointDirections) {
         self.position = position

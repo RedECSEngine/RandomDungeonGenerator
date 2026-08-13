@@ -43,7 +43,8 @@ let package = Package(
             dependencies: [
                 "Geometry",
                 .product(name: "Graphs", package: "swift-graphs"),
-                .product(name: "Randomization", package: "Randomization")
+                .product(name: "Randomization", package: "Randomization"),
+                .product(name: "OrderedCollections", package: "swift-collections"),
             ]
         ),
         .testTarget(

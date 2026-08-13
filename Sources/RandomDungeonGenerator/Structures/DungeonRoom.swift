@@ -2,7 +2,7 @@ import Geometry
 
 public protocol DungeonRoom: DungeonSegment {
     var rect: Rect { get set }
-    init(id: String, rect: Rect)
+    init(id: DungeonSegmentID, rect: Rect)
 }
 
 public extension DungeonRoom where Self: CustomStringConvertible {

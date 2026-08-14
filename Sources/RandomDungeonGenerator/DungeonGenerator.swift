@@ -50,6 +50,12 @@ public class DungeonGenerator<
     public private(set) var totalNumberOfStepsTakenAcrossAttempts = 0
     public private(set) var groupingGraphRoot: DungeonSegmentID?
     
+    public var spatialGroupingCount: Int {
+        groupings.values.filter {
+            $0.fromJoint != .nonSpatial && $0.toJoint != .nonSpatial
+        }.count
+    }
+    
     // MARK: Final outcome data
     public var dungeon: Dungeon<RoomType, HallwayType>!
     fileprivate var grid: [[Int]] = []
@@ -103,6 +109,12 @@ public class DungeonGenerator<
                 roundRoomPositions()
                 return
             }
+//            let groupingsCount = spatialGroupingCount
+//            identifyConnections()
+//            if groupingsCount != spatialGroupingCount {
+//                state = .fittingUntilNoMoreIntersections
+//                return
+//            }
             state = .generatingHallways
         case .generatingHallways:
             generateHallways()
@@ -261,8 +273,6 @@ public class DungeonGenerator<
         
         applyFreelanceRoomsFitting()
         applyGroupingsFitting()
-        
-        identifyConnections()
     }
     
     public func isSegment<A: DungeonSegment, B: DungeonSegment>(
@@ -492,7 +502,12 @@ public class DungeonGenerator<
                     }
                     let mapCenter = Point(x: dungeonSize.width / 2, y: dungeonSize.height / 2)
                     let diffOffset = mapCenter.diffOf(groupCenter)
-                    groupings[detachedGroupingId]?.offset = grouping.offset.offsetBy(diffOffset)
+                    let randOffsetX = Double.random(in: 0..<creationBounds.width, using: &randomNumberGenerator) - (creationBounds.width / 2)
+                    let randOffsetY = Double.random(in: 0..<creationBounds.height, using: &randomNumberGenerator) - (creationBounds.height / 2)
+                    
+                    groupings[detachedGroupingId]?.offset = grouping.offset
+                        .offsetBy(diffOffset)
+                        .offsetBy(x: randOffsetX, y: randOffsetY)
                     break mainLoop
                 }
             }
@@ -516,6 +531,10 @@ public class DungeonGenerator<
                 guard toJointTemp != .nonSpatial,
                       !connectedJoints.contains(toJointTemp.id) else { continue }
                 if fromJointTemp.matchesWith(other: toJointTemp) {
+                    
+                    
+                    
+                    
                     fromJoint = fromJointTemp
                     toJoint = toJointTemp
                     break mainLoop
@@ -528,6 +547,68 @@ public class DungeonGenerator<
         return (fromJoint, toJoint)
     }
     
+    public func translate(segmentId: DungeonSegmentID, by delta: Point) {
+        if var room = layoutRooms[segmentId] {
+            room.rect = room.rect.offsetBy(delta)
+            layoutRooms[segmentId] = room
+            return
+        }
+        if var grouping = groupings[segmentId] {
+            grouping.offset = grouping.offset.offsetBy(delta)
+            groupings[segmentId] = grouping
+        }
+    }
+    
+    public func outwardUnitVector(for direction: DungeonJointDirections) -> Point {
+        switch direction {
+        case .north: return Point(x: 0, y: -1)
+        case .south: return Point(x: 0, y: 1)
+        case .east:  return Point(x: 1, y: 0)
+        case .west:  return Point(x: -1, y: 0)
+        default:     return .zero
+        }
+    }
+
+    public func alignmentDelta(
+        moving movingJoint: DungeonJoint,
+        onto stationaryJoint: DungeonJoint,
+        gap: Double
+    ) -> Point {
+        let outward = outwardUnitVector(for: stationaryJoint.direction)
+        let target = stationaryJoint.position
+            .offsetBy(Point(x: outward.x * gap, y: outward.y * gap))
+        return target.diffOf(movingJoint.position)
+    }
+    
+    public func roomCount(beneathSegmentId segmentId: DungeonSegmentID) -> Int {
+        if layoutRooms[segmentId] != nil { return 1 }
+        guard let grouping = groupings[segmentId] else { return 0 }
+        return roomCount(beneathSegmentId: grouping.from)
+            + roomCount(beneathSegmentId: grouping.to)
+    }
+
+    public func alignSegments<A: DungeonSegment, B: DungeonSegment>(
+        _ segment: A,
+        and otherSegment: B,
+        connecting fromJoint: DungeonJoint,
+        with toJoint: DungeonJoint
+    ) {
+        guard fromJoint != .nonSpatial, toJoint != .nonSpatial else { return }
+        let fromCount = roomCount(beneathSegmentId: segment.id)
+        let otherCount = roomCount(beneathSegmentId: otherSegment.id)
+        let moveFrom = fromCount == otherCount
+            ? segment.id < otherSegment.id
+            : fromCount < otherCount
+        translate(
+            segmentId: moveFrom ? segment.id : otherSegment.id,
+            by: alignmentDelta(
+                moving: moveFrom ? fromJoint : toJoint,
+                onto: moveFrom ? toJoint : fromJoint,
+                gap: minimumRoomSpacing
+            )
+        )
+    }
+    
     @discardableResult
     public func createNewGrouping<A: DungeonSegment, B: DungeonSegment>(
         between segment: A,
@@ -536,6 +617,9 @@ public class DungeonGenerator<
         with toJoint: DungeonJoint
     ) -> DungeonGrouping {
         let id = String("\(randomNumberGenerator.next())-\(randomNumberGenerator.next())")
+        
+        alignSegments(segment, and: otherSegment, connecting: fromJoint, with: toJoint)
+        
         let newGrouping = DungeonGrouping(
             id: id,
             from: segment,

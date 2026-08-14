@@ -43,6 +43,7 @@ public class DungeonGenerator<
     // MARK: Intermediary State during generation
     public private(set) var state: DungeonGeneratorState = .initialState
     public private(set) var groupedRooms: OrderedSet<DungeonSegmentID> = []
+    public private(set) var connectedJoints: OrderedSet<DungeonJointID> = []
     public private(set) var groupings: OrderedDictionary<DungeonSegmentID, DungeonGrouping> = [:]
     public private(set) var layoutRooms: OrderedDictionary<DungeonSegmentID, RoomType> = [:]
     public private(set) var numberOfStepsTaken = 0
@@ -75,6 +76,7 @@ public class DungeonGenerator<
         layoutRooms = [:]
         groupedRooms = []
         groupings = [:]
+        connectedJoints = []
         groupingGraphRoot = nil
     }
     
@@ -267,8 +269,8 @@ public class DungeonGenerator<
         _ segment: A,
         sufficientlySpacedFrom otherSegment: B
     ) -> Bool {
-        for rect in segment.rects {
-            for otherRect in otherSegment.rects {
+        for rect in resolvedRects(forSegmentId: segment.id) {
+            for otherRect in resolvedRects(forSegmentId: otherSegment.id) {
                 let paddedRect = rect.inset(by: -minimumRoomSpacing)
                 guard paddedRect.intersects(otherRect) else {
                     continue
@@ -329,8 +331,8 @@ public class DungeonGenerator<
                 let otherGrouping = groupings[otherGroupingId] else {
                     return
                 }
-                for rect in grouping.rects {
-                    for otherRect in otherGrouping.rects {
+                for rect in resolvedRects(forSegmentId: grouping.id) {
+                    for otherRect in resolvedRects(forSegmentId: otherGrouping.id) {
                         let paddedRect = rect.inset(by: -minimumRoomSpacing)
                         guard paddedRect.intersects(otherRect) else {
                             continue
@@ -347,7 +349,8 @@ public class DungeonGenerator<
                 return
             }
             
-            let diagonalLength = grouping.rects.reduce(0) { $0 + $1.diagonalLength }
+            let diagonalLength = resolvedRects(forSegmentId: grouping.id)
+                .reduce(0) { $0 + $1.diagonalLength }
             velocityX = velocityX / diagonalLength
             velocityY = velocityY / diagonalLength
             
@@ -393,15 +396,57 @@ public class DungeonGenerator<
         return room.rect.offset(by: offsetForRoom)
     }
     
-    public func parentOffsetForGroupingId(_ groupingId: DungeonSegmentID) -> Point {
-        var offsetForGrouping = Point.zero
+    public func resolvedRects(forSegmentId segmentId: DungeonSegmentID) -> [Rect] {
+        if let room = layoutRooms[segmentId] {
+            return [room.rect]
+        }
+        guard let grouping = groupings[segmentId] else {
+            return []
+        }
+        let childRects = resolvedRects(forSegmentId: grouping.from)
+            + resolvedRects(forSegmentId: grouping.to)
+        return childRects.map { $0.offset(by: grouping.offset) }
+    }
+    
+    public func resolvedJoints(forSegmentId segmentId: DungeonSegmentID) -> [DungeonJoint] {
+        if let room = layoutRooms[segmentId] {
+            return room.joints
+        }
+        guard let grouping = groupings[segmentId] else {
+            return []
+        }
+        let childJoints = resolvedJoints(forSegmentId: grouping.from)
+            + resolvedJoints(forSegmentId: grouping.to)
+        return childJoints.map { $0.offsetBy(grouping.offset) }
+    }
+    
+    public func containingRect(forGroupingId groupingId: DungeonSegmentID) -> Rect? {
+        let rects = resolvedRects(forSegmentId: groupingId)
+        guard let first = rects.first else {
+            return nil
+        }
+        var minX = first.minX
+        var minY = first.minY
+        var maxX = first.maxX
+        var maxY = first.maxY
+        for rect in rects.dropFirst() {
+            minX = min(minX, rect.minX)
+            minY = min(minY, rect.minY)
+            maxX = max(maxX, rect.maxX)
+            maxY = max(maxY, rect.maxY)
+        }
+        return Rect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+    }
+    
+    public func parentOffsetForSegmentId(_ segmentId: DungeonSegmentID) -> Point {
+        var offsetForSegment = Point.zero
         if let rootGroupingId = groupingGraphRoot {
-            groupingPathToSegment(groupingId, from: rootGroupingId)
+            groupingPathToSegment(segmentId, from: rootGroupingId)
                 .forEach { grouping in
-                    offsetForGrouping = offsetForGrouping.offsetBy(grouping.offset)
+                    offsetForSegment = offsetForSegment.offsetBy(grouping.offset)
                 }
         }
-        return offsetForGrouping
+        return offsetForSegment
     }
     
     public func containsNoIntersectingRooms() -> Bool {
@@ -431,15 +476,20 @@ public class DungeonGenerator<
             }
         }
         
+        // For each detached grouping, iterate over rects
+        // and make sure they are all within bounds
         let detachedGroupings = detachedChildGroupingIds()
         for detachedGroupingId in detachedGroupings {
             guard let grouping = groupings[detachedGroupingId] else {
                 continue
             }
-            mainLoop: for rect in grouping.rects {
+            mainLoop: for rect in resolvedRects(forSegmentId: grouping.id) {
+                // if a rect is out of bounds
                 if !dungeonRect.contains(rect) {
-                    // Move group to dead center
-                    let groupCenter = grouping.containingRect.center
+                    // Move the whole group to dead center
+                    guard let groupCenter = containingRect(forGroupingId: grouping.id)?.center else {
+                        continue
+                    }
                     let mapCenter = Point(x: dungeonSize.width / 2, y: dungeonSize.height / 2)
                     let diffOffset = mapCenter.diffOf(groupCenter)
                     groupings[detachedGroupingId]?.offset = grouping.offset.offsetBy(diffOffset)
@@ -459,10 +509,12 @@ public class DungeonGenerator<
         }
         var fromJoint: DungeonJoint?
         var toJoint: DungeonJoint?
-        mainLoop: for fromJointTemp in segment.joints {
-            guard fromJointTemp != .nonSpatial else { continue }
-            for toJointTemp in otherSegment.joints {
-                guard toJointTemp != .nonSpatial else { continue }
+        mainLoop: for fromJointTemp in resolvedJoints(forSegmentId: segment.id) {
+            guard fromJointTemp != .nonSpatial,
+                  !connectedJoints.contains(fromJointTemp.id) else { continue }
+            for toJointTemp in resolvedJoints(forSegmentId: otherSegment.id) {
+                guard toJointTemp != .nonSpatial,
+                      !connectedJoints.contains(toJointTemp.id) else { continue }
                 if fromJointTemp.matchesWith(other: toJointTemp) {
                     fromJoint = fromJointTemp
                     toJoint = toJointTemp
@@ -488,15 +540,20 @@ public class DungeonGenerator<
             id: id,
             from: segment,
             to: otherSegment,
-            fromJoint: fromJoint,
-            toJoint: toJoint
+            fromJoint: fromJoint.id,
+            toJoint: toJoint.id
         )
+        
+        connectedJoints.append(fromJoint.id)
+        connectedJoints.append(toJoint.id)
+        
         if segment is RoomType {
             groupedRooms.append(segment.id)
         }
         if otherSegment is RoomType {
             groupedRooms.append(otherSegment.id)
         }
+        
         groupings[newGrouping.id] = newGrouping
         if let groupingGraphRoot {
             if groupingGraphRoot == segment.id || groupingGraphRoot == otherSegment.id {
@@ -546,7 +603,11 @@ public class DungeonGenerator<
     }
     
     public func hasParent(segmentId: DungeonSegmentID) -> Bool {
-        groupings.values.contains { $0.from == segmentId || $0.to == segmentId }
+        groupings.values.contains { grouping in
+            grouping.fromJoint != .nonSpatial
+                && grouping.toJoint != .nonSpatial
+                && (grouping.from == segmentId || grouping.to == segmentId)
+        }
     }
     
     public func identifyRoomToGroupingConnections() {

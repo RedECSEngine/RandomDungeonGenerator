@@ -109,12 +109,12 @@ public class DungeonGenerator<
                 roundRoomPositions()
                 return
             }
-//            let groupingsCount = spatialGroupingCount
-//            identifyConnections()
-//            if groupingsCount != spatialGroupingCount {
-//                state = .fittingUntilNoMoreIntersections
-//                return
-//            }
+            let groupingsCount = spatialGroupingCount
+            identifyConnections()
+            if groupingsCount != spatialGroupingCount {
+                state = .fittingUntilNoMoreIntersections
+                return
+            }
             state = .generatingHallways
         case .generatingHallways:
             generateHallways()
@@ -459,10 +459,30 @@ public class DungeonGenerator<
         return offsetForSegment
     }
     
+    public func directlyConnectedRoomPairs() -> Set<[DungeonSegmentID]> {
+        var pairs: Set<[DungeonSegmentID]> = []
+        for (groupingId, grouping) in groupings
+        where grouping.fromJoint != .nonSpatial && grouping.toJoint != .nonSpatial {
+            let joints = resolvedJoints(forSegmentId: groupingId)
+            guard let from = joints.first(where: { $0.id == grouping.fromJoint }),
+                  let to = joints.first(where: { $0.id == grouping.toJoint }) else { continue }
+            pairs.insert([from.segmentId, to.segmentId].sorted())
+        }
+        return pairs
+    }
+
     public func containsNoIntersectingRooms() -> Bool {
+        let connectedPairs = directlyConnectedRoomPairs()
         for currentRoom in layoutRooms.values {
             for otherRoom in layoutRooms.values {
                 guard currentRoom != otherRoom else { continue }
+                if connectedPairs.contains([currentRoom.id, otherRoom.id].sorted()) {
+                    if finalRoomRectForRoom(currentRoom)
+                        .intersects(finalRoomRectForRoom(otherRoom)) {
+                        return false
+                    }
+                    continue
+                }
                 if doesRoom(currentRoom, intersectWith: otherRoom) {
                     return false
                 }
@@ -587,26 +607,81 @@ public class DungeonGenerator<
             + roomCount(beneathSegmentId: grouping.to)
     }
 
-    public func alignSegments<A: DungeonSegment, B: DungeonSegment>(
-        _ segment: A,
-        and otherSegment: B,
-        connecting fromJoint: DungeonJoint,
-        with toJoint: DungeonJoint
-    ) {
-        guard fromJoint != .nonSpatial, toJoint != .nonSpatial else { return }
-        let fromCount = roomCount(beneathSegmentId: segment.id)
-        let otherCount = roomCount(beneathSegmentId: otherSegment.id)
-        let moveFrom = fromCount == otherCount
+    public func roomIds(beneathSegmentId segmentId: DungeonSegmentID) -> [DungeonSegmentID] {
+        if layoutRooms[segmentId] != nil {
+            return [segmentId]
+        }
+        guard let grouping = groupings[segmentId] else {
+            return []
+        }
+        return roomIds(beneathSegmentId: grouping.from)
+            + roomIds(beneathSegmentId: grouping.to)
+    }
+
+    public func isMoveSafe(
+        movingSegmentId: DungeonSegmentID,
+        by delta: Point,
+        abutting abuttingRoomId: DungeonSegmentID
+    ) -> Bool {
+        let movingRoomIds = Set(roomIds(beneathSegmentId: movingSegmentId))
+        guard !movingRoomIds.isEmpty else { return false }
+        for movingRoomId in movingRoomIds {
+            guard let movingRoom = layoutRooms[movingRoomId] else { continue }
+            let movedRect = finalRoomRectForRoom(movingRoom).offsetBy(delta)
+            let paddedMovedRect = movedRect.inset(by: -minimumRoomSpacing)
+            for otherRoom in layoutRooms.values where !movingRoomIds.contains(otherRoom.id) {
+                let otherRect = finalRoomRectForRoom(otherRoom)
+                if otherRoom.id == abuttingRoomId {
+                    if movedRect.intersects(otherRect) { return false }
+                } else if paddedMovedRect.intersects(otherRect) {
+                    return false
+                }
+            }
+        }
+        return true
+    }
+
+    public func planConnection<A: DungeonSegment, B: DungeonSegment>(
+        between segment: A,
+        and otherSegment: B
+    ) -> DungeonConnectionPlan? {
+        guard segment.id != otherSegment.id else { return nil }
+        let segmentRooms = roomCount(beneathSegmentId: segment.id)
+        let otherRooms = roomCount(beneathSegmentId: otherSegment.id)
+        let segmentMovesFirst = segmentRooms == otherRooms
             ? segment.id < otherSegment.id
-            : fromCount < otherCount
-        translate(
-            segmentId: moveFrom ? segment.id : otherSegment.id,
-            by: alignmentDelta(
-                moving: moveFrom ? fromJoint : toJoint,
-                onto: moveFrom ? toJoint : fromJoint,
-                gap: minimumRoomSpacing
-            )
-        )
+            : segmentRooms < otherRooms
+        for fromJoint in resolvedJoints(forSegmentId: segment.id) {
+            guard fromJoint != .nonSpatial,
+                  !connectedJoints.contains(fromJoint.id) else { continue }
+            for toJoint in resolvedJoints(forSegmentId: otherSegment.id) {
+                guard toJoint != .nonSpatial,
+                      !connectedJoints.contains(toJoint.id) else { continue }
+                guard fromJoint.matchesWith(other: toJoint) else { continue }
+                let options: [(DungeonSegmentID, DungeonJoint, DungeonJoint)] = segmentMovesFirst
+                    ? [(segment.id, fromJoint, toJoint), (otherSegment.id, toJoint, fromJoint)]
+                    : [(otherSegment.id, toJoint, fromJoint), (segment.id, fromJoint, toJoint)]
+                for (movingId, movingJoint, stationaryJoint) in options {
+                    let delta = alignmentDelta(
+                        moving: movingJoint,
+                        onto: stationaryJoint,
+                        gap: minimumRoomSpacing
+                    )
+                    guard isMoveSafe(
+                        movingSegmentId: movingId,
+                        by: delta,
+                        abutting: stationaryJoint.segmentId
+                    ) else { continue }
+                    return DungeonConnectionPlan(
+                        fromJoint: fromJoint,
+                        toJoint: toJoint,
+                        movingSegmentId: movingId,
+                        delta: delta
+                    )
+                }
+            }
+        }
+        return nil
     }
     
     @discardableResult
@@ -614,12 +689,15 @@ public class DungeonGenerator<
         between segment: A,
         and otherSegment: B,
         connecting fromJoint: DungeonJoint,
-        with toJoint: DungeonJoint
+        with toJoint: DungeonJoint,
+        applying plan: DungeonConnectionPlan? = nil
     ) -> DungeonGrouping {
         let id = String("\(randomNumberGenerator.next())-\(randomNumberGenerator.next())")
-        
-        alignSegments(segment, and: otherSegment, connecting: fromJoint, with: toJoint)
-        
+
+        if let plan {
+            translate(segmentId: plan.movingSegmentId, by: plan.delta)
+        }
+
         let newGrouping = DungeonGrouping(
             id: id,
             from: segment,
@@ -672,14 +750,15 @@ public class DungeonGenerator<
                 guard !groupedRooms.contains(otherRoom.id) else {
                     continue
                 }
-                guard let (fromJoint, toJoint) = checkForConnectionOpportunity(between: currentRoom, and: otherRoom) else {
+                guard let plan = planConnection(between: currentRoom, and: otherRoom) else {
                     continue // couldn't find a way to line them up
                 }
                 createNewGrouping(
                     between: currentRoom,
                     and: otherRoom,
-                    connecting: fromJoint,
-                    with: toJoint
+                    connecting: plan.fromJoint,
+                    with: plan.toJoint,
+                    applying: plan
                 )
                 break
             }
@@ -706,7 +785,7 @@ public class DungeonGenerator<
                 guard !hasParent(segmentId: id) else {
                     continue
                 }
-                guard let (fromJoint, toJoint) = checkForConnectionOpportunity(
+                guard let plan = planConnection(
                     between: currentRoom,
                     and: grouping
                 ) else {
@@ -715,8 +794,9 @@ public class DungeonGenerator<
                 createNewGrouping(
                     between: currentRoom,
                     and: grouping,
-                    connecting: fromJoint,
-                    with: toJoint
+                    connecting: plan.fromJoint,
+                    with: plan.toJoint,
+                    applying: plan
                 )
                 break
             }
@@ -739,7 +819,7 @@ public class DungeonGenerator<
                       let otherGrouping = groupings[otherGroupingId] else {
                     continue
                 }
-                guard let (fromJoint, toJoint) = checkForConnectionOpportunity(
+                guard let plan = planConnection(
                     between: grouping,
                     and: otherGrouping
                 ) else {
@@ -757,8 +837,9 @@ public class DungeonGenerator<
                 var latestGrouping = createNewGrouping(
                     between: grouping,
                     and: otherGrouping,
-                    connecting: fromJoint,
-                    with: toJoint
+                    connecting: plan.fromJoint,
+                    with: plan.toJoint,
+                    applying: plan
                 )
                 
                 for remainingGroupingId in detachedChildGroupings where remainingGroupingId != groupingId && remainingGroupingId != otherGroupingId {

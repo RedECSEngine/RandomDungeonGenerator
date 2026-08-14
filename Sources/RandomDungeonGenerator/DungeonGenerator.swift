@@ -393,6 +393,17 @@ public class DungeonGenerator<
         return room.rect.offset(by: offsetForRoom)
     }
     
+    public func parentOffsetForGroupingId(_ groupingId: DungeonSegmentID) -> Point {
+        var offsetForGrouping = Point.zero
+        if let rootGroupingId = groupingGraphRoot {
+            groupingPathToSegment(groupingId, from: rootGroupingId)
+                .forEach { grouping in
+                    offsetForGrouping = offsetForGrouping.offsetBy(grouping.offset)
+                }
+        }
+        return offsetForGrouping
+    }
+    
     public func containsNoIntersectingRooms() -> Bool {
         for currentRoom in layoutRooms.values {
             for otherRoom in layoutRooms.values {
@@ -534,6 +545,10 @@ public class DungeonGenerator<
         }
     }
     
+    public func hasParent(segmentId: DungeonSegmentID) -> Bool {
+        groupings.values.contains { $0.from == segmentId || $0.to == segmentId }
+    }
+    
     public func identifyRoomToGroupingConnections() {
         for currentRoom in layoutRooms.values {
             // continously check got grouped room changes, we cant use cached ungrouped array here
@@ -543,6 +558,9 @@ public class DungeonGenerator<
             // First look for connections between freelance rooms
             let groupings = self.groupings
             for (id, grouping) in groupings {
+                guard !hasParent(segmentId: id) else {
+                    continue
+                }
                 guard let (fromJoint, toJoint) = checkForConnectionOpportunity(
                     between: currentRoom,
                     and: grouping
@@ -565,8 +583,15 @@ public class DungeonGenerator<
         let detachedChildGroupings = detachedChildGroupingIds()
         for i in 0..<detachedChildGroupings.count {
             let groupingId = detachedChildGroupings[i]
+            guard !hasParent(segmentId: groupingId) else {
+                continue
+            }
             for otherGroupingId in detachedChildGroupings where groupingId != otherGroupingId {
-                guard let grouping = groupings[groupingId], let otherGrouping = groupings[otherGroupingId] else {
+                guard !hasParent(segmentId: otherGroupingId) else {
+                    continue
+                }
+                guard let grouping = groupings[groupingId],
+                      let otherGrouping = groupings[otherGroupingId] else {
                     continue
                 }
                 guard let (fromJoint, toJoint) = checkForConnectionOpportunity(

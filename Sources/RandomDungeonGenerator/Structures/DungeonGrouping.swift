@@ -1,6 +1,13 @@
 import Geometry
 import Graphs
 
+public extension Edge where VertexType == DungeonSegmentID, EdgeType == DungeonGrouping {
+    var grouping: EdgeType {
+        get { data }
+        set { data = newValue }
+    }
+}
+
 public struct DungeonGrouping: DungeonSegment {
     public let id: DungeonSegmentID
     
@@ -9,43 +16,18 @@ public struct DungeonGrouping: DungeonSegment {
     public let fromJoint: DungeonJointID
     public let toJoint: DungeonJointID
 
-    public var offset: Point = .zero
-    
-
-    
-//    public var rects: [Rect] {
-//        let rects = (originalFromRects + originalToRects)
-//        if offset == .zero {
-//            return rects
-//        }
-//        return rects
-//            .map { $0.offset(by: offset) }
-//    }
-    
-//    public var joints: [DungeonJoint] {
-//        if offset == .zero {
-//            return originalJoints        }
-//        return originalJoints
-//            .map {
-//                DungeonJoint(
-//                    position: $0.position.offsetBy(offset),
-//                    direction: $0.direction
-//                )
-//            }
-//    }
-    
     public var segmentIDs: [DungeonSegmentID] { [from, to] }
 
-    public init<FromSegment: DungeonSegment, ToSegment: DungeonSegment>(
+    public init(
         id: DungeonSegmentID,
-        from: FromSegment,
-        to: ToSegment,
+        from: DungeonSegmentID,
+        to: DungeonSegmentID,
         fromJoint: DungeonJointID,
         toJoint: DungeonJointID
     ) {
         self.id = id
-        self.from = from.id
-        self.to = to.id
+        self.from = from
+        self.to = to
         self.fromJoint = fromJoint
         self.toJoint = toJoint
     }

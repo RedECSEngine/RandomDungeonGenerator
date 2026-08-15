@@ -35,16 +35,16 @@ public struct DungeonJoint: Hashable, Codable {
         self.direction = direction
     }
     
-    public func matchesWith(other: DungeonJoint) -> Bool {
+    public func matchesWith(other: DungeonJoint, ignoringPosition: Bool = false) -> Bool {
         switch (self.direction, other.direction) {
         case (.north, .south):
-            return self.position.y > other.position.y
+            return ignoringPosition || self.position.y > other.position.y
         case (.south, .north):
-            return self.position.y < other.position.y
+            return ignoringPosition || self.position.y < other.position.y
         case (.east, .west):
-            return self.position.x < other.position.x
+            return ignoringPosition || self.position.x < other.position.x
         case (.west, .east):
-            return self.position.x > other.position.x
+            return ignoringPosition || self.position.x > other.position.x
         default:
             return false
         }

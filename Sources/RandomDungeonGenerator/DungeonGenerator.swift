@@ -118,6 +118,11 @@ public class DungeonGenerator<
                 state = .fittingUntilNoMoreIntersections
                 return
             }
+            
+            for room in ungroupedRooms() {
+                findConnection(for: room, ignoringJointAlignment: true)
+            }
+            
             state = .generatingHallways
         case .generatingHallways:
             generateHallways()
@@ -259,7 +264,7 @@ public class DungeonGenerator<
         
         numberOfStepsTaken += 1
         totalNumberOfStepsTakenAcrossAttempts += 1
-        removeRoomsOutOfBounds()
+        reorganizeSegmentsOutOfBounds()
         
         applyFreelanceRoomsFitting()
         applyGroupingsFitting()
@@ -384,18 +389,22 @@ public class DungeonGenerator<
         return paddedRect.intersects(roomRect)
     }
     
-    public func removeRoomsOutOfBounds() {
+    public func reorganizeSegmentsOutOfBounds() {
         // inset dungeon rect to prevent rooms on edges
         let dungeonRect = Rect(origin: Point(x: 0, y: 0), size: dungeonSize).inset(by: 1)
         for room in ungroupedRooms() {
             if !dungeonRect.contains(room.rect) {
-                let offsetX = (dungeonSize.width - creationBounds.width) / 2
-                let offsetY = (dungeonSize.height - creationBounds.height) / 2
-                let x = offsetX + Double.random(in: 0..<creationBounds.width, using: &randomNumberGenerator)
-                let y = offsetY + Double.random(in: 0..<creationBounds.height, using: &randomNumberGenerator)
-                var newRoom = room
-                newRoom.rect.origin = Point(x: x, y: y)
-                layoutRooms[newRoom.id] = newRoom
+                // if we are out of bounds, try using this peice on an open joint
+                // otherwise position somewhere random within ceation bounds
+                if !findConnection(for: room) {
+                    let offsetX = (dungeonSize.width - creationBounds.width) / 2
+                    let offsetY = (dungeonSize.height - creationBounds.height) / 2
+                    let x = offsetX + Double.random(in: 0..<creationBounds.width, using: &randomNumberGenerator)
+                    let y = offsetY + Double.random(in: 0..<creationBounds.height, using: &randomNumberGenerator)
+                    var newRoom = room
+                    newRoom.rect.origin = Point(x: x, y: y)
+                    layoutRooms[newRoom.id] = newRoom
+                }
             }
         }
         
@@ -633,24 +642,50 @@ public class DungeonGenerator<
         }
         return true
     }
+    
+    public func findConnection(
+        for room: RoomType,
+        ignoringJointAlignment: Bool = false
+    ) -> Bool {
+        for otherRoom in layoutRooms.values {
+            if let plan = planConnection(between: room, and: otherRoom, ignoringJointAlignment: ignoringJointAlignment) {
+                createNewGrouping(
+                    between: room,
+                    and: otherRoom,
+                    connecting: plan.fromJoint,
+                    with: plan.toJoint,
+                    applying: plan
+                )
+                return true
+            }
+        }
+        return false
+    }
 
     public func planConnection<A: DungeonSegment, B: DungeonSegment>(
         between segment: A,
-        and otherSegment: B
+        and otherSegment: B,
+        ignoringJointAlignment: Bool = false
     ) -> DungeonConnectionPlan? {
         guard segment.id != otherSegment.id else { return nil }
+        
+        // plan to move the segment with the fewest connections
         let segmentRooms = roomCount(beneathSegmentId: segment.id)
         let otherRooms = roomCount(beneathSegmentId: otherSegment.id)
         let segmentMovesFirst = segmentRooms == otherRooms
             ? segment.id < otherSegment.id
             : segmentRooms < otherRooms
+        
         for fromJoint in resolvedJoints(forSegmentId: segment.id) {
             guard fromJoint != .nonSpatial,
                   !connectedJoints.contains(fromJoint.id) else { continue }
             for toJoint in resolvedJoints(forSegmentId: otherSegment.id) {
                 guard toJoint != .nonSpatial,
                       !connectedJoints.contains(toJoint.id) else { continue }
-                guard fromJoint.matchesWith(other: toJoint) else { continue }
+                guard fromJoint.matchesWith(
+                    other: toJoint,
+                    ignoringPosition: ignoringJointAlignment
+                ) else { continue }
                 let options: [(DungeonSegmentID, DungeonJoint, DungeonJoint)] = segmentMovesFirst
                     ? [(segment.id, fromJoint, toJoint), (otherSegment.id, toJoint, fromJoint)]
                     : [(otherSegment.id, toJoint, fromJoint), (segment.id, fromJoint, toJoint)]

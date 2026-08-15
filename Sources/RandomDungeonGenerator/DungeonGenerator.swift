@@ -19,6 +19,9 @@ public class DungeonGenerator<
     RoomType: DungeonRoom,
     HallwayType: DungeonHallway
 >: Equatable {
+    public static func == (lhs: DungeonGenerator, rhs: DungeonGenerator) -> Bool {
+        return lhs === rhs
+    }
     
     private var randomNumberGenerator: any RandomNumberGenerator = SystemRandomNumberGenerator()
     
@@ -136,6 +139,8 @@ public class DungeonGenerator<
         }
     }
     
+    // MARK: - Dungeon Prep
+    
     public func regenerateRooms() {
         layoutRooms = [:]
         if let initialRooms {
@@ -180,6 +185,8 @@ public class DungeonGenerator<
         }
     }
     
+    // MARK: - Traversal
+    
     public func groupingPathToSegment(_ segmentId: DungeonSegmentID, from rootSegmentId: DungeonSegmentID) -> [DungeonGrouping] {
         if let grouping = groupings[rootSegmentId] {
             if grouping.from == segmentId || grouping.to == segmentId {
@@ -218,25 +225,6 @@ public class DungeonGenerator<
         }
     }
     
-    // TODO: Useful ?
-    public func iterateUngroupedRoomsWithAllRooms(
-        using body: (RoomType, RoomType) -> Void
-    ) {
-        layoutRooms.keys.forEach { roomId in
-            guard !groupedRooms.contains(roomId) else { return }
-            layoutRooms.keys.forEach {
-                otherRoomId in
-                guard roomId != otherRoomId else { return }
-                guard let room = layoutRooms[roomId],
-                        let otherRoom = layoutRooms[otherRoomId] else {
-                    assertionFailure("one or more rooms doesnt exist")
-                   return
-                }
-                body(room, otherRoom)
-            }
-        }
-    }
-    
     public func detachedChildGroupingIds(from parentSegmentId: DungeonSegmentID? = nil) -> [DungeonSegmentID] {
         let topId = parentSegmentId ?? groupingGraphRoot
         guard let rootGroupId = topId,
@@ -259,6 +247,8 @@ public class DungeonGenerator<
         }
         return childGroupings
     }
+    
+    // MARK: - Fitting
     
     public func applyFittingStep() {
         if numberOfStepsTaken > maximumStepsBeforeRetry {
@@ -326,7 +316,6 @@ public class DungeonGenerator<
     }
         
     public func applyGroupingsFitting() {
-        // TODO: Confirm this fixes groupings checking against their children
         let detachedGroupings = detachedChildGroupingIds()
         detachedGroupings.forEach { groupingId in
             guard let grouping = groupings[groupingId] else {
@@ -395,6 +384,51 @@ public class DungeonGenerator<
         return paddedRect.intersects(roomRect)
     }
     
+    public func removeRoomsOutOfBounds() {
+        // inset dungeon rect to prevent rooms on edges
+        let dungeonRect = Rect(origin: Point(x: 0, y: 0), size: dungeonSize).inset(by: 1)
+        for room in ungroupedRooms() {
+            if !dungeonRect.contains(room.rect) {
+                let offsetX = (dungeonSize.width - creationBounds.width) / 2
+                let offsetY = (dungeonSize.height - creationBounds.height) / 2
+                let x = offsetX + Double.random(in: 0..<creationBounds.width, using: &randomNumberGenerator)
+                let y = offsetY + Double.random(in: 0..<creationBounds.height, using: &randomNumberGenerator)
+                var newRoom = room
+                newRoom.rect.origin = Point(x: x, y: y)
+                layoutRooms[newRoom.id] = newRoom
+            }
+        }
+        
+        // For each detached grouping, iterate over rects
+        // and make sure they are all within bounds
+        let detachedGroupings = detachedChildGroupingIds()
+        for detachedGroupingId in detachedGroupings {
+            guard let grouping = groupings[detachedGroupingId] else {
+                continue
+            }
+            mainLoop: for rect in resolvedRects(forSegmentId: grouping.id) {
+                // if a rect is out of bounds
+                if !dungeonRect.contains(rect) {
+                    // Move the whole group to dead center
+                    guard let groupCenter = containingRect(forGroupingId: grouping.id)?.center else {
+                        continue
+                    }
+                    let mapCenter = Point(x: dungeonSize.width / 2, y: dungeonSize.height / 2)
+                    let diffOffset = mapCenter.diffOf(groupCenter)
+                    let randOffsetX = Double.random(in: 0..<creationBounds.width, using: &randomNumberGenerator) - (creationBounds.width / 2)
+                    let randOffsetY = Double.random(in: 0..<creationBounds.height, using: &randomNumberGenerator) - (creationBounds.height / 2)
+                    
+                    groupings[detachedGroupingId]?.offset = grouping.offset
+                        .offsetBy(diffOffset)
+                        .offsetBy(x: randOffsetX, y: randOffsetY)
+                    break mainLoop
+                }
+            }
+        }
+    }
+    
+    // MARK: - Geometry
+    
     public func finalRoomRectForRoom(_ room: RoomType) -> Rect {
         var offsetForRoom = Point.zero
         if groupedRooms.contains(room.id), let rootGroupingId = groupingGraphRoot {
@@ -459,6 +493,8 @@ public class DungeonGenerator<
         return offsetForSegment
     }
     
+    // MARK: - Connections
+    
     public func directlyConnectedRoomPairs() -> Set<[DungeonSegmentID]> {
         var pairs: Set<[DungeonSegmentID]> = []
         for (groupingId, grouping) in groupings
@@ -489,49 +525,6 @@ public class DungeonGenerator<
             }
         }
         return true
-    }
-    
-    public func removeRoomsOutOfBounds() {
-        // inset dungeon rect to prevent rooms on edges
-        let dungeonRect = Rect(origin: Point(x: 0, y: 0), size: dungeonSize).inset(by: 1)
-        for room in ungroupedRooms() {
-            if !dungeonRect.contains(room.rect) {
-                let offsetX = (dungeonSize.width - creationBounds.width) / 2
-                let offsetY = (dungeonSize.height - creationBounds.height) / 2
-                let x = offsetX + Double.random(in: 0..<creationBounds.width, using: &randomNumberGenerator)
-                let y = offsetY + Double.random(in: 0..<creationBounds.height, using: &randomNumberGenerator)
-                var newRoom = room
-                newRoom.rect.origin = Point(x: x, y: y)
-                layoutRooms[newRoom.id] = newRoom
-            }
-        }
-        
-        // For each detached grouping, iterate over rects
-        // and make sure they are all within bounds
-        let detachedGroupings = detachedChildGroupingIds()
-        for detachedGroupingId in detachedGroupings {
-            guard let grouping = groupings[detachedGroupingId] else {
-                continue
-            }
-            mainLoop: for rect in resolvedRects(forSegmentId: grouping.id) {
-                // if a rect is out of bounds
-                if !dungeonRect.contains(rect) {
-                    // Move the whole group to dead center
-                    guard let groupCenter = containingRect(forGroupingId: grouping.id)?.center else {
-                        continue
-                    }
-                    let mapCenter = Point(x: dungeonSize.width / 2, y: dungeonSize.height / 2)
-                    let diffOffset = mapCenter.diffOf(groupCenter)
-                    let randOffsetX = Double.random(in: 0..<creationBounds.width, using: &randomNumberGenerator) - (creationBounds.width / 2)
-                    let randOffsetY = Double.random(in: 0..<creationBounds.height, using: &randomNumberGenerator) - (creationBounds.height / 2)
-                    
-                    groupings[detachedGroupingId]?.offset = grouping.offset
-                        .offsetBy(diffOffset)
-                        .offsetBy(x: randOffsetX, y: randOffsetY)
-                    break mainLoop
-                }
-            }
-        }
     }
     
     public func checkForConnectionOpportunity<A: DungeonSegment, B: DungeonSegment>(
@@ -859,6 +852,8 @@ public class DungeonGenerator<
         
         return false
     }
+    
+    // MARK: - Graphing
 
     public func generateDungeonGraph() {
         guard dungeon == nil else { return }
@@ -1058,6 +1053,8 @@ public class DungeonGenerator<
             return newEdgeList
         }
     }
+    
+    // MARK: - Grid
 
     public func to2DGrid() -> [[Int]] {
         guard self.grid.isEmpty else {
@@ -1069,9 +1066,5 @@ public class DungeonGenerator<
         self.grid = grid
 
         return self.grid
-    }
-    
-    public static func == (lhs: DungeonGenerator, rhs: DungeonGenerator) -> Bool {
-        return lhs === rhs
     }
 }

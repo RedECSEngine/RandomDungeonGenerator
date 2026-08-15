@@ -11,7 +11,7 @@ public enum DungeonGeneratorState: Int, Codable {
     case fittingUntilNoMoreIntersections
     case roundingRoomPositions
     case refittingAndRounding
-    case generatingHallways
+    case refining
     case finished
 }
 
@@ -71,14 +71,6 @@ public class DungeonGenerator<
         }
         return joints
     }
-
-    public var spatialGroupingCount: Int {
-        groupingGraph.edges.count
-    }
-    
-    // MARK: Final outcome data
-    public var dungeon: Dungeon<RoomType, HallwayType>!
-    fileprivate var grid: [[Int]] = []
     
     public init(_ seed: UInt64? = nil) {
         if let seed {
@@ -97,7 +89,6 @@ public class DungeonGenerator<
     public func reset() {
         numberOfStepsTaken = 0
         totalNumberOfStepsTakenAcrossAttempts = 0
-        dungeon = nil
         state = .initialState
         layoutRooms = [:]
         groupingGraph = .init()
@@ -112,7 +103,7 @@ public class DungeonGenerator<
             randomizeRoomPositions()
             state = .fittingUntilNoMoreIntersections
         case .fittingUntilNoMoreIntersections:
-            guard containsNoIntersectingRooms() else {
+            guard containsNoIntersectingRooms() || connectedGroups().count == 1 else {
                 applyFittingStep()
                 return
             }
@@ -121,27 +112,37 @@ public class DungeonGenerator<
             roundRoomPositions()
             state = .refittingAndRounding
         case .refittingAndRounding:
-            guard containsNoIntersectingRooms() else {
+            guard containsNoIntersectingRooms() || connectedGroups().count == 1 else {
                 applyFittingStep()
                 roundRoomPositions()
                 return
             }
-            let groupingsCount = spatialGroupingCount
-            identifyConnections()
-            if groupingsCount != spatialGroupingCount {
-                state = .fittingUntilNoMoreIntersections
-                return
+            if connectedGroups().count != 1 {
+                let groupingsCount = groupingGraph.edges.count
+                identifyConnections()
+                if groupingsCount != groupingGraph.edges.count {
+                    state = .fittingUntilNoMoreIntersections
+                    return
+                }
+            }
+            // reevaluate connected groups count again
+            if connectedGroups().count != 1 {
+                for room in ungroupedRooms() {
+                    findConnection(for: room, ignoringJointAlignment: true)
+                }
             }
             
-            for room in ungroupedRooms() {
-                findConnection(for: room, ignoringJointAlignment: true)
+            // reevaluate connected groups count agai
+            if connectedGroups().count != 1 {
+                for group in connectedGroups() {
+                    findConnection(for: group, ignoringJointAlignment: true)
+                }
             }
-
+           
             centerAllRoomsInDungeon()
 
-            state = .generatingHallways
-        case .generatingHallways:
-            generateHallways()
+            state = .refining
+        case .refining:
             state = .finished
         case .finished:
             break
@@ -481,14 +482,23 @@ public class DungeonGenerator<
         Set(groupingGraph.edges.map { [$0.from.data, $0.to.data].sorted() })
     }
 
+    /// Rooms within the same connected group only have to avoid overlapping: they move as a
+    /// unit, so their separation cannot be changed by fitting and demanding
+    /// `minimumRoomSpacing` between them would never be satisfiable. Rooms in different
+    /// groups still have to respect the spacing, since fitting can push those apart.
     public func containsNoIntersectingRooms() -> Bool {
-        let connectedPairs = directlyConnectedRoomPairs()
+        var groupIndexByRoom: [DungeonSegmentID: Int] = [:]
+        for (index, group) in connectedGroups().enumerated() {
+            for roomId in group {
+                groupIndexByRoom[roomId] = index
+            }
+        }
         for currentRoom in layoutRooms.values {
             for otherRoom in layoutRooms.values {
-                guard currentRoom != otherRoom else { continue }
-                if connectedPairs.contains([currentRoom.id, otherRoom.id].sorted()) {
-                    if finalRoomRectForRoom(currentRoom)
-                        .intersects(finalRoomRectForRoom(otherRoom)) {
+                guard currentRoom.id != otherRoom.id else { continue }
+                let currentGroup = groupIndexByRoom[currentRoom.id]
+                if currentGroup != nil, currentGroup == groupIndexByRoom[otherRoom.id] {
+                    if currentRoom.rect.intersects(otherRoom.rect) {
                         return false
                     }
                     continue
@@ -587,6 +597,38 @@ public class DungeonGenerator<
         }
         return false
     }
+    
+    @discardableResult
+    public func findConnection(
+        for grouping: OrderedSet<DungeonSegmentID>,
+        ignoringJointAlignment: Bool = false
+    ) -> Bool {
+        for roomId in grouping {
+            guard let room = layoutRooms[roomId] else { continue }
+            for otherRoomId in layoutRooms.keys {
+                guard !grouping.contains(otherRoomId),
+                      let currentRoom = layoutRooms[roomId],
+                      let otherRoom = layoutRooms[otherRoomId] else {
+                    continue
+                }
+                if let plan = planConnection(
+                    between: currentRoom,
+                    and: otherRoom,
+                    ignoringJointAlignment: ignoringJointAlignment
+                ) {
+                    createNewGrouping(
+                        between: currentRoom,
+                        and: otherRoom,
+                        connecting: plan.fromJoint,
+                        with: plan.toJoint,
+                        applying: plan
+                    )
+                    return true
+                }
+            }
+        }
+        return false
+    }
 
     public func planConnection(
         between room: RoomType,
@@ -594,6 +636,7 @@ public class DungeonGenerator<
         ignoringJointAlignment: Bool = false
     ) -> DungeonConnectionPlan? {
         guard room.id != otherRoom.id else { return nil }
+        guard !roomIds(connectedTo: room.id).contains(otherRoom.id) else { return nil }
 
         // plan to move the smaller connected group of vertices
         let roomGroupSize = roomCount(connectedTo: room.id)
@@ -768,217 +811,217 @@ public class DungeonGenerator<
     }
     
     // MARK: - Graphing
+//
+//    public func generateDungeonGraph() {
+//        guard dungeon == nil else { return }
+//        let originalGraph = generateUnoptimizedDungeon().graph
+//        if useMinimumSpanningTreeForLayout {
+//            let minimumSpanningGraph = minimumSpanningTreeKruskal(graph: originalGraph).tree
+//            dungeon = Dungeon(fromGraph: minimumSpanningGraph)
+//        } else {
+//            dungeon = Dungeon(fromGraph: originalGraph)
+//        }
+//    }
 
-    public func generateDungeonGraph() {
-        guard dungeon == nil else { return }
-        let originalGraph = generateUnoptimizedDungeon().graph
-        if useMinimumSpanningTreeForLayout {
-            let minimumSpanningGraph = minimumSpanningTreeKruskal(graph: originalGraph).tree
-            dungeon = Dungeon(fromGraph: minimumSpanningGraph)
-        } else {
-            dungeon = Dungeon(fromGraph: originalGraph)
-        }
-    }
+//    public func generateUnoptimizedDungeon() -> Dungeon<RoomType, HallwayType> {
+//        var dungeon = Dungeon<RoomType, HallwayType>()
+//        let connectableRoomRadius = (maxRoomSpacing / 2)
+//        var connectedRooms: [(room: RoomType, pairings: [RoomType])] = []
+//        connectedRooms.reserveCapacity(layoutRooms.count)
+//        for currentRoom in layoutRooms.values {
+//            guard connectedRooms.contains(where: { $0.room == currentRoom }) == false else {
+//                continue
+//            }
+//            
+//            var currentRoomReach = Circle(fittedTo: currentRoom.rect)
+//            currentRoomReach.radius += connectableRoomRadius
+//            let pairings: [RoomType] = layoutRooms.values.compactMap {
+//                otherRoom in
+//                
+//                guard currentRoom != otherRoom else { return nil }
+//                
+//                var otherRoomReach = Circle(fittedTo: otherRoom.rect)
+//                otherRoomReach.radius += connectableRoomRadius
+//                
+//                if currentRoomReach.intersects(otherRoomReach) {
+//                    return otherRoom
+//                }
+//                return nil
+//            }
+//            
+//            guard pairings.isEmpty == false else {
+//                continue
+//            }
+//            
+//            connectedRooms.append((currentRoom, pairings))
+//        }
+//        
+//        var index: Int = 0
+//        var keepRooms: OrderedSet<DungeonSegmentID> = []
+//        for (currentRoom, pairings) in connectedRooms {
+//            let currentVertex = dungeon.graph.createVertex(currentRoom)
+//            for otherRoom in pairings {
+//                index += 1
+//                let otherVertex = dungeon.graph.createVertex(otherRoom)
+//                // start with abstract hallways that aren't sized or connected to anything yet
+//                let hallway = HallwayType(
+//                    id: "hallway-\(currentRoom.id)-\(otherRoom.id)-\(index)",
+//                    type: .corner,
+//                    from: .nonSpatial,
+//                    to: .nonSpatial
+//                )
+//                dungeon.graph.addEdge(
+//                    currentVertex,
+//                    to: otherVertex,
+//                    data: hallway,
+//                    withWeight: currentRoom.rect.center.distanceFrom(otherRoom.rect.center)
+//                )
+//            }
+//            keepRooms.append(currentRoom.id)
+//            layoutRooms[currentRoom.id] = currentRoom
+//        }
+//        
+//        for key in layoutRooms.keys {
+//            if keepRooms.contains(key) {
+//                continue
+//            }
+//            layoutRooms[key] = nil
+//        }
+//
+//        return dungeon
+//    }
 
-    public func generateUnoptimizedDungeon() -> Dungeon<RoomType, HallwayType> {
-        var dungeon = Dungeon<RoomType, HallwayType>()
-        let connectableRoomRadius = (maxRoomSpacing / 2)
-        var connectedRooms: [(room: RoomType, pairings: [RoomType])] = []
-        connectedRooms.reserveCapacity(layoutRooms.count)
-        for currentRoom in layoutRooms.values {
-            guard connectedRooms.contains(where: { $0.room == currentRoom }) == false else {
-                continue
-            }
-            
-            var currentRoomReach = Circle(fittedTo: currentRoom.rect)
-            currentRoomReach.radius += connectableRoomRadius
-            let pairings: [RoomType] = layoutRooms.values.compactMap {
-                otherRoom in
-                
-                guard currentRoom != otherRoom else { return nil }
-                
-                var otherRoomReach = Circle(fittedTo: otherRoom.rect)
-                otherRoomReach.radius += connectableRoomRadius
-                
-                if currentRoomReach.intersects(otherRoomReach) {
-                    return otherRoom
-                }
-                return nil
-            }
-            
-            guard pairings.isEmpty == false else {
-                continue
-            }
-            
-            connectedRooms.append((currentRoom, pairings))
-        }
-        
-        var index: Int = 0
-        var keepRooms: OrderedSet<DungeonSegmentID> = []
-        for (currentRoom, pairings) in connectedRooms {
-            let currentVertex = dungeon.graph.createVertex(currentRoom)
-            for otherRoom in pairings {
-                index += 1
-                let otherVertex = dungeon.graph.createVertex(otherRoom)
-                // start with abstract hallways that aren't sized or connected to anything yet
-                let hallway = HallwayType(
-                    id: "hallway-\(currentRoom.id)-\(otherRoom.id)-\(index)",
-                    type: .corner,
-                    from: .nonSpatial,
-                    to: .nonSpatial
-                )
-                dungeon.graph.addEdge(
-                    currentVertex,
-                    to: otherVertex,
-                    data: hallway,
-                    withWeight: currentRoom.rect.center.distanceFrom(otherRoom.rect.center)
-                )
-            }
-            keepRooms.append(currentRoom.id)
-            layoutRooms[currentRoom.id] = currentRoom
-        }
-        
-        for key in layoutRooms.keys {
-            if keepRooms.contains(key) {
-                continue
-            }
-            layoutRooms[key] = nil
-        }
+//    public func generateHallways() {
+//        generateDungeonGraph()
+//        generateLineHallways()
+//        
+//        let newList = dungeon.graph.adjacencyList.map { edgeList in
+//            var newEdgeList = edgeList
+//            newEdgeList.edges = newEdgeList.edges?.map { edge in
+//                var newHallway = edge.hallway
+//                var newEdge = edge
+//                
+//                let lineSet = newHallway.joints.map { $0.position }
+//
+//                guard lineSet.count >= 2 else { return edge }
+//
+//                let firstLine = (lineSet[0].roundedUp(), lineSet[1].roundedUp())
+//                let verticalDiff = firstLine.0.diffOf(firstLine.1)
+//                let verticalDirection = Direction.fromPoint(verticalDiff)
+//                let roundedHalfWidth = (hallwayWidth / 2).rounded(.up)
+//
+//                // vertical hallways are first
+//                if verticalDirection == .down {
+//                    let origin = firstLine.0.offsetBy(x: -roundedHalfWidth, y: 0)
+//                    let rect = Rect(origin: origin, size: Size(width: hallwayWidth, height: firstLine.0.distanceFrom(firstLine.1)))
+//                    newHallway.rects.append(rect)
+//                } else {
+//                    let origin = firstLine.1.offsetBy(x: -roundedHalfWidth, y: 0)
+//                    let rect = Rect(origin: origin, size: Size(width: hallwayWidth, height: firstLine.0.distanceFrom(firstLine.1)))
+//                    newHallway.rects.append(rect)
+//                }
+//                
+//                guard lineSet.count >= 3 else {
+//                    newEdge.hallway = newHallway
+//                    return newEdge
+//                }
+//
+//                let secondLine = (lineSet[1].roundedUp(), lineSet[2].roundedUp())
+//                let horizontalDiff = secondLine.0.diffOf(secondLine.1)
+//                let horizontalDirection = Direction.fromPoint(horizontalDiff)
+//
+//                // horizontal comes second
+//                if horizontalDirection == .left {
+//                    let origin = secondLine.0.offsetBy(x: 0, y: -roundedHalfWidth)
+//                    let rect = Rect(origin: origin, size: Size(width: secondLine.0.distanceFrom(secondLine.1), height: hallwayWidth))
+//                    newHallway.rects.append(rect)
+//                } else {
+//                    let origin = secondLine.1.offsetBy(x: 0, y: -roundedHalfWidth)
+//                    let rect = Rect(origin: origin, size: Size(width: secondLine.0.distanceFrom(secondLine.1), height: hallwayWidth))
+//                    newHallway.rects.append(rect)
+//                }
+//                
+//                newEdge.hallway = newHallway
+//                
+//                return newEdge
+//            }
+//            return newEdgeList
+//        }
+//        dungeon.graph.adjacencyList = newList
+//    }
 
-        return dungeon
-    }
-
-    public func generateHallways() {
-        generateDungeonGraph()
-        generateLineHallways()
-        
-        let newList = dungeon.graph.adjacencyList.map { edgeList in
-            var newEdgeList = edgeList
-            newEdgeList.edges = newEdgeList.edges?.map { edge in
-                var newHallway = edge.hallway
-                var newEdge = edge
-                
-                let lineSet = newHallway.joints.map { $0.position }
-
-                guard lineSet.count >= 2 else { return edge }
-
-                let firstLine = (lineSet[0].roundedUp(), lineSet[1].roundedUp())
-                let verticalDiff = firstLine.0.diffOf(firstLine.1)
-                let verticalDirection = Direction.fromPoint(verticalDiff)
-                let roundedHalfWidth = (hallwayWidth / 2).rounded(.up)
-
-                // vertical hallways are first
-                if verticalDirection == .down {
-                    let origin = firstLine.0.offsetBy(x: -roundedHalfWidth, y: 0)
-                    let rect = Rect(origin: origin, size: Size(width: hallwayWidth, height: firstLine.0.distanceFrom(firstLine.1)))
-                    newHallway.rects.append(rect)
-                } else {
-                    let origin = firstLine.1.offsetBy(x: -roundedHalfWidth, y: 0)
-                    let rect = Rect(origin: origin, size: Size(width: hallwayWidth, height: firstLine.0.distanceFrom(firstLine.1)))
-                    newHallway.rects.append(rect)
-                }
-                
-                guard lineSet.count >= 3 else {
-                    newEdge.hallway = newHallway
-                    return newEdge
-                }
-
-                let secondLine = (lineSet[1].roundedUp(), lineSet[2].roundedUp())
-                let horizontalDiff = secondLine.0.diffOf(secondLine.1)
-                let horizontalDirection = Direction.fromPoint(horizontalDiff)
-
-                // horizontal comes second
-                if horizontalDirection == .left {
-                    let origin = secondLine.0.offsetBy(x: 0, y: -roundedHalfWidth)
-                    let rect = Rect(origin: origin, size: Size(width: secondLine.0.distanceFrom(secondLine.1), height: hallwayWidth))
-                    newHallway.rects.append(rect)
-                } else {
-                    let origin = secondLine.1.offsetBy(x: 0, y: -roundedHalfWidth)
-                    let rect = Rect(origin: origin, size: Size(width: secondLine.0.distanceFrom(secondLine.1), height: hallwayWidth))
-                    newHallway.rects.append(rect)
-                }
-                
-                newEdge.hallway = newHallway
-                
-                return newEdge
-            }
-            return newEdgeList
-        }
-        dungeon.graph.adjacencyList = newList
-    }
-
-    public func generateLineHallways() {
-        var index = 0
-        dungeon.graph.adjacencyList = dungeon.graph.adjacencyList.map { edgeList in
-            var newEdgeList = edgeList
-            newEdgeList.edges = newEdgeList.edges?.map { edge in
-                index += 1
-                var newEdge = edge
-                
-                let fromRoom = edge.from.room
-                let toRoom = edge.to.room
-                
-                var fromJoint: DungeonJoint?
-                var toJoint: DungeonJoint?
-                mainLoop: for fromJointTemp in fromRoom.joints {
-                    guard fromJointTemp != .nonSpatial else { continue }
-                    for toJointTemp in toRoom.joints {
-                        guard toJointTemp != .nonSpatial else { continue }
-                        if fromJointTemp.matchesWith(other: toJointTemp) {
-                            fromJoint = fromJointTemp
-                            toJoint = toJointTemp
-                            break mainLoop
-                        }
-                    }
-                }
-                
-                guard let fromJoint, let toJoint else {
-                    return edge // couldn't find a way to line them up
-                }
-                
-                let id = "\(index)-hallway-\(fromRoom.id)-\(toRoom.id)"
-                let positionDiff = fromJoint.position.diffOf(toJoint.position)
-                if positionDiff.x != 0 && positionDiff.y != 0 {
-                    // we need a corner hallway
-                    newEdge.hallway = HallwayType(
-                        id: id,
-                        type: .corner,
-                        from: fromJoint,
-                        to: toJoint
-                    )
-                }
-                else if positionDiff.y > 0 {
-                    // north joint on origin must have Y > south joint
-                    newEdge.hallway = HallwayType(id: id, type: .northSouth, from: fromJoint, to: toJoint)
-                } else if positionDiff.x < 0 {
-                    // east joint on origin must have X < west joint
-                    newEdge.hallway = HallwayType(id: id, type: .eastWest, from: fromJoint, to: toJoint)
-                }
-                else if positionDiff.y < 0 {
-                   // south < north
-                    newEdge.hallway = HallwayType(id: id, type: .northSouth, from: toJoint, to: fromJoint)
-                } else if positionDiff.x > 0 {
-                    // west > east
-                    newEdge.hallway = HallwayType(id: id, type: .eastWest, from: toJoint, to: fromJoint)
-                }
-                
-                return newEdge
-            }
-            return newEdgeList
-        }
-    }
-    
+//    public func generateLineHallways() {
+//        var index = 0
+//        dungeon.graph.adjacencyList = dungeon.graph.adjacencyList.map { edgeList in
+//            var newEdgeList = edgeList
+//            newEdgeList.edges = newEdgeList.edges?.map { edge in
+//                index += 1
+//                var newEdge = edge
+//                
+//                let fromRoom = edge.from.room
+//                let toRoom = edge.to.room
+//                
+//                var fromJoint: DungeonJoint?
+//                var toJoint: DungeonJoint?
+//                mainLoop: for fromJointTemp in fromRoom.joints {
+//                    guard fromJointTemp != .nonSpatial else { continue }
+//                    for toJointTemp in toRoom.joints {
+//                        guard toJointTemp != .nonSpatial else { continue }
+//                        if fromJointTemp.matchesWith(other: toJointTemp) {
+//                            fromJoint = fromJointTemp
+//                            toJoint = toJointTemp
+//                            break mainLoop
+//                        }
+//                    }
+//                }
+//                
+//                guard let fromJoint, let toJoint else {
+//                    return edge // couldn't find a way to line them up
+//                }
+//                
+//                let id = "\(index)-hallway-\(fromRoom.id)-\(toRoom.id)"
+//                let positionDiff = fromJoint.position.diffOf(toJoint.position)
+//                if positionDiff.x != 0 && positionDiff.y != 0 {
+//                    // we need a corner hallway
+//                    newEdge.hallway = HallwayType(
+//                        id: id,
+//                        type: .corner,
+//                        from: fromJoint,
+//                        to: toJoint
+//                    )
+//                }
+//                else if positionDiff.y > 0 {
+//                    // north joint on origin must have Y > south joint
+//                    newEdge.hallway = HallwayType(id: id, type: .northSouth, from: fromJoint, to: toJoint)
+//                } else if positionDiff.x < 0 {
+//                    // east joint on origin must have X < west joint
+//                    newEdge.hallway = HallwayType(id: id, type: .eastWest, from: fromJoint, to: toJoint)
+//                }
+//                else if positionDiff.y < 0 {
+//                   // south < north
+//                    newEdge.hallway = HallwayType(id: id, type: .northSouth, from: toJoint, to: fromJoint)
+//                } else if positionDiff.x > 0 {
+//                    // west > east
+//                    newEdge.hallway = HallwayType(id: id, type: .eastWest, from: toJoint, to: fromJoint)
+//                }
+//                
+//                return newEdge
+//            }
+//            return newEdgeList
+//        }
+//    }
+//    
     // MARK: - Grid
-
-    public func to2DGrid() -> [[Int]] {
-        guard self.grid.isEmpty else {
-            return self.grid
-        }
-        
-        let grid = dungeon.create2DGrid(size: dungeonSize)
-        
-        self.grid = grid
-
-        return self.grid
-    }
+//
+//    public func to2DGrid() -> [[Int]] {
+//        guard self.grid.isEmpty else {
+//            return self.grid
+//        }
+//        
+//        let grid = dungeon.create2DGrid(size: dungeonSize)
+//        
+//        self.grid = grid
+//
+//        return self.grid
+//    }
 }

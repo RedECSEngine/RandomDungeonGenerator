@@ -216,7 +216,7 @@ final class Tests: XCTestCase {
 
         let before = generator.layoutRooms.mapValues { $0.rect.origin }
         let delta = Point(x: 3, y: -2)
-        generator.translate(roomId: rooms[0].id, by: delta)
+        generator.translateGroup(connectedTo: rooms[0].id, by: delta)
 
         for (roomId, origin) in before {
             guard let moved = generator.layoutRooms[roomId] else {

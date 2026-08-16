@@ -23,6 +23,18 @@ public struct DungeonJointDirections: OptionSet, Codable, Hashable, CustomString
 }
 
 public extension DungeonJointDirections {
+    var opposite: Self {
+        switch self {
+        case .north: return .south
+        case .south: return .north
+        case .east: return .west
+        case .west: return .east
+        default: return .none
+        }
+    }
+}
+
+public extension DungeonJointDirections {
     var description: String {
         switch self {
         case .north: return "north"

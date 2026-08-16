@@ -93,7 +93,7 @@ public class DungeonGenerator<SegmentType: DungeonSegment>: Equatable {
         groupingGraph = .init()
     }
     
-    public func nextGenerationStep() {
+    public func nextGenerationStep() throws {
         switch state {
         case .initialState:
             state = .regenerateRoomsAndPositions
@@ -151,21 +151,22 @@ public class DungeonGenerator<SegmentType: DungeonSegment>: Equatable {
             addSingleLoopConnection()
             state = .addingHallways
         case .addingHallways:
+            try fillInHallways()
             state = .finished
         case .finished:
             break
         }
     }
     
-    public func runCompleteGeneration(withSegmentPool segmentPool: [SegmentType]? = nil) {
+    public func runCompleteGeneration(withSegmentPool segmentPool: [SegmentType]? = nil) throws {
         if let segmentPool {
             self.segmentPool = segmentPool
         }
-        
+
         reset()
-        
+
         while state != .finished {
-            nextGenerationStep()
+            try nextGenerationStep()
         }
     }
     

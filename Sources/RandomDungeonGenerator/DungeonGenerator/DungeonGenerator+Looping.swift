@@ -28,7 +28,26 @@ extension DungeonGenerator {
             abs(movedOwnJoint.position.x - connection.partner.position.x),
             abs(movedOwnJoint.position.y - connection.partner.position.y)
         )
-        return gap >= minimumRoomSpacing
+        guard gap >= minimumRoomSpacing else {
+            return false
+        }
+        return isGapFillable(between: movedOwnJoint, and: connection.partner)
+    }
+
+    public func isGapFillable(
+        between fromJoint: DungeonJoint,
+        and toJoint: DungeonJoint
+    ) -> Bool {
+        guard let axis = straightGapAxis(from: fromJoint, to: toJoint),
+              let maximumGap = maximumFillableGap(
+                  along: axis,
+                  bridging: fromJoint,
+                  and: toJoint
+              ) else {
+            return true
+        }
+        let gap = distance(from: fromJoint, to: toJoint, along: axis)
+        return gap <= maximumGap + Self.jointAlignmentTolerance
     }
 
     public func canSlideRoom(
@@ -71,7 +90,10 @@ extension DungeonGenerator {
                     guard let otherRoom = layoutRooms[otherRoomId] else { continue }
                     for partnerJoint in otherRoom.joints
                     where !consumedJoints.contains(partnerJoint.id) {
-                        guard newJoint.matchesWith(other: partnerJoint) else { continue }
+                        guard newJoint.matchesWith(other: partnerJoint),
+                              isGapFillable(between: newJoint, and: partnerJoint) else {
+                            continue
+                        }
                         let slide = slidesVertically
                             ? Point(x: 0, y: partnerJoint.position.y - newJoint.position.y)
                             : Point(x: partnerJoint.position.x - newJoint.position.x, y: 0)

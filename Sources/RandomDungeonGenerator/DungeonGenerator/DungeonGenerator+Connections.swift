@@ -77,7 +77,6 @@ extension DungeonGenerator {
         ignoringJointAlignment: Bool = false
     ) -> Bool {
         for roomId in grouping {
-            guard let room = layoutRooms[roomId] else { continue }
             for otherRoomId in layoutRooms.keys {
                 guard !grouping.contains(otherRoomId),
                       let currentRoom = layoutRooms[roomId],
@@ -153,6 +152,18 @@ extension DungeonGenerator {
         return nil
     }
     
+    public func isPlacementSafe(
+        rect: Rect,
+        ignoring ignoredIds: Set<DungeonSegmentID>,
+        padded: Bool
+    ) -> Bool {
+        let checkedRect = padded ? rect.inset(by: -minimumRoomSpacing) : rect
+        for otherRoom in layoutRooms.values where !ignoredIds.contains(otherRoom.id) {
+            if checkedRect.intersects(otherRoom.rect) { return false }
+        }
+        return true
+    }
+
     public func isMoveSafe(
         movingSegmentId: DungeonSegmentID,
         by delta: Point,
@@ -160,17 +171,20 @@ extension DungeonGenerator {
     ) -> Bool {
         let movingRoomIds = roomIds(connectedToAndIncluding: movingSegmentId)
         guard !movingRoomIds.isEmpty else { return false }
+        let movingIds = Set(movingRoomIds)
         for movingRoomId in movingRoomIds {
             guard let movingRoom = layoutRooms[movingRoomId] else { continue }
             let movedRect = movingRoom.rect.offsetBy(delta)
-            let paddedMovedRect = movedRect.inset(by: -minimumRoomSpacing)
-            for otherRoom in layoutRooms.values where !movingRoomIds.contains(otherRoom.id) {
-                let otherRect = otherRoom.rect
-                if otherRoom.id == adjacentRoomId {
-                    if movedRect.intersects(otherRect) { return false }
-                } else if paddedMovedRect.intersects(otherRect) {
-                    return false
-                }
+            guard isPlacementSafe(
+                rect: movedRect,
+                ignoring: movingIds.union([adjacentRoomId]),
+                padded: true
+            ), isPlacementSafe(
+                rect: movedRect,
+                ignoring: movingIds,
+                padded: false
+            ) else {
+                return false
             }
         }
         return true

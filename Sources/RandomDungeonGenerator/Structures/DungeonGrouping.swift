@@ -16,8 +16,6 @@ public struct DungeonGrouping: Hashable, Codable, Identifiable {
     public let fromJoint: DungeonJointID
     public let toJoint: DungeonJointID
 
-    public var segmentIDs: [DungeonSegmentID] { [from, to] }
-
     public init(
         id: DungeonSegmentID,
         from: DungeonSegmentID,

@@ -77,10 +77,6 @@ extension DungeonGenerator {
         return layoutRooms.values.filter { !grouped.contains($0.id) }
     }
     
-    public func directlyConnectedRoomPairs() -> Set<[DungeonSegmentID]> {
-        Set(groupingGraph.edges.map { [$0.from.data, $0.to.data].sorted() })
-    }
-
     /// The single connection a room holds, as the room's own joint and the joint it meets.
     /// Returns nil unless the room has exactly one connection.
     public func singularConnection(

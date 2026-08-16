@@ -8,7 +8,7 @@ public extension Edge where VertexType == DungeonSegmentID, EdgeType == DungeonG
     }
 }
 
-public struct DungeonGrouping: DungeonSegment {
+public struct DungeonGrouping: Hashable, Codable, Identifiable {
     public let id: DungeonSegmentID
     
     public let from: DungeonSegmentID
@@ -32,25 +32,3 @@ public struct DungeonGrouping: DungeonSegment {
         self.toJoint = toJoint
     }
 }
-
-/*
- 
- public struct DungeonGrouping: Codable, Hashable {
-     public let id: DungeonSegmentID
-     public var offset: Point = .zero
-     
-     public let fromJoint: DungeonJoint
-     public let toJoint: DungeonJoint
-     
-     public init(
-         id: DungeonSegmentID,
-         fromJoint: DungeonJoint,
-         toJoint: DungeonJoint
-     ) {
-         self.id = id
-         self.fromJoint = fromJoint
-         self.toJoint = toJoint
-     }
- }
-
- */

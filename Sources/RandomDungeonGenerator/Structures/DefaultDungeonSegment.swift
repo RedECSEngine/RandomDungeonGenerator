@@ -1,24 +1,18 @@
 import Geometry
 
-public protocol DungeonRoom: DungeonSegment {
-    var rect: Rect { get set }
-    var joints: [DungeonJoint] { get }
-    init(id: DungeonSegmentID, rect: Rect)
-}
-
-public extension DungeonRoom where Self: CustomStringConvertible {
-    var description: String {
-        return rect.center.description
-    }
-}
-
-public struct DefaultDungeonRoom: DungeonRoom, CustomStringConvertible {
+public struct DefaultDungeonSegment: DungeonSegment, CustomStringConvertible {
     public var id: String
     public var rect: Rect
+    public var layoutCategory: DungeonSegmentLayoutCategory
 
-    public init(id: String, rect: Rect) {
+    public init(
+        id: String,
+        rect: Rect,
+        layoutCategory: DungeonSegmentLayoutCategory
+    ) {
         self.id = id
         self.rect = rect
+        self.layoutCategory = layoutCategory
     }
     
     public var joints: [DungeonJoint] {
@@ -49,11 +43,4 @@ public struct DefaultDungeonRoom: DungeonRoom, CustomStringConvertible {
             ),
         ]
     }
-    
-   
 }
-
-public func == (_ lhs: DefaultDungeonRoom, _ rhs: DefaultDungeonRoom) -> Bool {
-    return lhs.rect == rhs.rect
-}
-

@@ -45,7 +45,7 @@ public class DungeonGenerator<SegmentType: DungeonSegment>: Equatable {
     // MARK: Intermediary State during generation
     public internal(set) var state: DungeonGeneratorState = .initialState
     public internal(set) var groupingGraph: AdjacencyListGraph<DungeonSegmentID, DungeonGrouping> = .init()
-    public internal(set) var layoutRooms: OrderedDictionary<DungeonSegmentID, SegmentType> = [:]
+    public internal(set) var layoutSegments: OrderedDictionary<DungeonSegmentID, SegmentType> = [:]
     public internal(set) var numberOfStepsTaken = 0
     public internal(set) var totalNumberOfStepsTakenAcrossAttempts = 0
 
@@ -89,7 +89,7 @@ public class DungeonGenerator<SegmentType: DungeonSegment>: Equatable {
         numberOfStepsTaken = 0
         totalNumberOfStepsTakenAcrossAttempts = 0
         state = .initialState
-        layoutRooms = [:]
+        layoutSegments = [:]
         groupingGraph = .init()
     }
     
@@ -173,12 +173,12 @@ public class DungeonGenerator<SegmentType: DungeonSegment>: Equatable {
     // MARK: - Dungeon Prep
     
     public func regenerateRooms() {
-        layoutRooms = [:]
+        layoutSegments = [:]
         if let segmentPool {
             segmentPool
                 .filter { $0.layoutCategory == .room }
                 .forEach { room in
-                    layoutRooms[room.id] = room
+                    layoutSegments[room.id] = room
                 }
         } else {
             for index in (0 ..< initialRoomCreationCount) {
@@ -193,7 +193,7 @@ public class DungeonGenerator<SegmentType: DungeonSegment>: Equatable {
                 let size = Size(width: width, height: height)
                 let rect = Rect(origin: .zero, size: size)
                 let room = SegmentType(id: "room-\(index)", rect: rect, layoutCategory: .room)
-                layoutRooms[room.id] = room
+                layoutSegments[room.id] = room
             }
         }
     }

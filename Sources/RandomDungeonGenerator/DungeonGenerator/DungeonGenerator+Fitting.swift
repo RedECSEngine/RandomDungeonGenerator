@@ -24,10 +24,10 @@ extension DungeonGenerator {
             var velocityY: Double = 0
             var neighborCount: Int = 0
             
-            layoutRooms.keys.forEach {
+            layoutSegments.keys.forEach {
                 otherRoomId in
                 guard currentRoom.id != otherRoomId,
-                      let otherRoom = layoutRooms[otherRoomId] else {
+                      let otherRoom = layoutSegments[otherRoomId] else {
                     return
                 }
                 guard doesRoom(currentRoom, intersectWith: otherRoom) else {
@@ -54,7 +54,7 @@ extension DungeonGenerator {
             let newRect = Rect(origin: newPosition, size: currentRoom.rect.size)
             var newRoom = currentRoom
             newRoom.rect = newRect
-            layoutRooms[newRoom.id] = newRoom
+            layoutSegments[newRoom.id] = newRoom
         }
     }
     
@@ -66,11 +66,11 @@ extension DungeonGenerator {
             var diagonalLength: Double = 0
             
             for roomId in group {
-                guard let room = layoutRooms[roomId] else { continue }
+                guard let room = layoutSegments[roomId] else { continue }
                 let rect = room.rect
                 diagonalLength += rect.diagonalLength
                 let paddedRect = rect.inset(by: -minimumRoomSpacing)
-                for otherRoom in layoutRooms.values where !group.contains(otherRoom.id) {
+                for otherRoom in layoutSegments.values where !group.contains(otherRoom.id) {
                     guard paddedRect.intersects(otherRoom.rect) else {
                         continue
                     }
@@ -98,7 +98,7 @@ extension DungeonGenerator {
             let newX = room.rect.origin.x.rounded(.up)
             let newY = room.rect.origin.y.rounded(.up)
             newRoom.rect.origin = Point(x: newX, y: newY)
-            layoutRooms[newRoom.id] = newRoom
+            layoutSegments[newRoom.id] = newRoom
         }
     }
     
@@ -116,7 +116,7 @@ extension DungeonGenerator {
                     let y = offsetY + Double.random(in: 0..<creationBounds.height, using: &randomNumberGenerator)
                     var newRoom = room
                     newRoom.rect.origin = Point(x: x, y: y)
-                    layoutRooms[newRoom.id] = newRoom
+                    layoutSegments[newRoom.id] = newRoom
                 }
             }
         }
@@ -156,7 +156,7 @@ extension DungeonGenerator {
         let mapCenter = Point(x: dungeonSize.width / 2, y: dungeonSize.height / 2)
         let delta = mapCenter.diffOf(layoutRect.center)
         translateRoomsOnly(
-            OrderedSet(layoutRooms.keys),
+            OrderedSet(layoutSegments.keys),
             by: Point(x: delta.x.rounded(), y: delta.y.rounded())
         )
     }

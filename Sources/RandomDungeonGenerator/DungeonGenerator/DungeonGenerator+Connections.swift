@@ -48,9 +48,9 @@ extension DungeonGenerator {
         for room: SegmentType,
         ignoringJointAlignment: Bool = false
     ) -> Bool {
-        for otherRoomId in layoutRooms.keys {
-            guard let currentRoom = layoutRooms[room.id],
-                  let otherRoom = layoutRooms[otherRoomId] else {
+        for otherRoomId in layoutSegments.keys {
+            guard let currentRoom = layoutSegments[room.id],
+                  let otherRoom = layoutSegments[otherRoomId] else {
                 continue
             }
             if let plan = planConnection(
@@ -77,10 +77,10 @@ extension DungeonGenerator {
         ignoringJointAlignment: Bool = false
     ) -> Bool {
         for roomId in grouping {
-            for otherRoomId in layoutRooms.keys {
+            for otherRoomId in layoutSegments.keys {
                 guard !grouping.contains(otherRoomId),
-                      let currentRoom = layoutRooms[roomId],
-                      let otherRoom = layoutRooms[otherRoomId] else {
+                      let currentRoom = layoutSegments[roomId],
+                      let otherRoom = layoutSegments[otherRoomId] else {
                     continue
                 }
                 if let plan = planConnection(
@@ -158,7 +158,7 @@ extension DungeonGenerator {
         padded: Bool
     ) -> Bool {
         let checkedRect = padded ? rect.inset(by: -minimumRoomSpacing) : rect
-        for otherRoom in layoutRooms.values where !ignoredIds.contains(otherRoom.id) {
+        for otherRoom in layoutSegments.values where !ignoredIds.contains(otherRoom.id) {
             if checkedRect.intersects(otherRoom.rect) { return false }
         }
         return true
@@ -173,7 +173,7 @@ extension DungeonGenerator {
         guard !movingRoomIds.isEmpty else { return false }
         let movingIds = Set(movingRoomIds)
         for movingRoomId in movingRoomIds {
-            guard let movingRoom = layoutRooms[movingRoomId] else { continue }
+            guard let movingRoom = layoutSegments[movingRoomId] else { continue }
             let movedRect = movingRoom.rect.offsetBy(delta)
             guard isPlacementSafe(
                 rect: movedRect,
@@ -194,14 +194,14 @@ extension DungeonGenerator {
     @discardableResult
     public func identifyFreelanceRoomConnections() -> Bool {
         var madeConnection = false
-        for currentRoomId in layoutRooms.keys {
+        for currentRoomId in layoutSegments.keys {
             guard connectionCount(forRoomId: currentRoomId) == 0 else {
                 continue
             }
-            for otherRoomId in layoutRooms.keys {
+            for otherRoomId in layoutSegments.keys {
                 guard connectionCount(forRoomId: otherRoomId) == 0,
-                      let currentRoom = layoutRooms[currentRoomId],
-                      let otherRoom = layoutRooms[otherRoomId] else {
+                      let currentRoom = layoutSegments[currentRoomId],
+                      let otherRoom = layoutSegments[otherRoomId] else {
                     continue
                 }
                 guard let plan = planConnection(between: currentRoom, and: otherRoom) else {
@@ -225,14 +225,14 @@ extension DungeonGenerator {
     @discardableResult
     public func identifyRoomToGroupingConnections() -> Bool {
         var madeConnection = false
-        for currentRoomId in layoutRooms.keys {
+        for currentRoomId in layoutSegments.keys {
             guard connectionCount(forRoomId: currentRoomId) == 0 else {
                 continue
             }
-            for otherRoomId in layoutRooms.keys {
+            for otherRoomId in layoutSegments.keys {
                 guard connectionCount(forRoomId: otherRoomId) > 0,
-                      let currentRoom = layoutRooms[currentRoomId],
-                      let otherRoom = layoutRooms[otherRoomId] else {
+                      let currentRoom = layoutSegments[currentRoomId],
+                      let otherRoom = layoutSegments[otherRoomId] else {
                     continue
                 }
                 guard let plan = planConnection(between: currentRoom, and: otherRoom) else {
@@ -254,16 +254,16 @@ extension DungeonGenerator {
     
     /// Joins two already-grouped vertices that belong to separate groups.
     public func identifyGroupingToGroupingConnections() {
-        for currentRoomId in layoutRooms.keys {
+        for currentRoomId in layoutSegments.keys {
             guard connectionCount(forRoomId: currentRoomId) > 0 else {
                 continue
             }
             let currentGroup = roomIds(connectedToAndIncluding: currentRoomId)
-            for otherRoomId in layoutRooms.keys {
+            for otherRoomId in layoutSegments.keys {
                 guard connectionCount(forRoomId: otherRoomId) > 0,
                       !currentGroup.contains(otherRoomId),
-                      let currentRoom = layoutRooms[currentRoomId],
-                      let otherRoom = layoutRooms[otherRoomId] else {
+                      let currentRoom = layoutSegments[currentRoomId],
+                      let otherRoom = layoutSegments[otherRoomId] else {
                     continue
                 }
                 guard let plan = planConnection(between: currentRoom, and: otherRoom) else {

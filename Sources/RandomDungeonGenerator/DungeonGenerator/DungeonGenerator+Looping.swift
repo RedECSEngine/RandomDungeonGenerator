@@ -57,7 +57,7 @@ extension DungeonGenerator {
     ) -> Bool {
         let movedRect = room.rect.offsetBy(delta)
         let paddedRect = movedRect.inset(by: -minimumRoomSpacing)
-        for otherRoom in layoutRooms.values where otherRoom.id != room.id {
+        for otherRoom in layoutSegments.values where otherRoom.id != room.id {
             if otherRoom.id == abuttingRoomId {
                 if movedRect.intersects(otherRoom.rect) { return false }
             } else if paddedRect.intersects(otherRoom.rect) {
@@ -74,10 +74,10 @@ extension DungeonGenerator {
     @discardableResult
     public func addSingleLoopConnection() -> Bool {
         let consumedJoints = connectedJoints
-        for roomId in layoutRooms.keys {
+        for roomId in layoutSegments.keys {
             guard let slideAxis = freeSlideAxisForRoom(roomId),
                   let existingConnection = singularConnection(ofRoomId: roomId),
-                  let room = layoutRooms[roomId] else {
+                  let room = layoutSegments[roomId] else {
                 continue
             }
             let slidesVertically = slideAxis == .northSouth
@@ -86,8 +86,8 @@ extension DungeonGenerator {
                     || newJoint.direction == .west
                 // only a pair perpendicular to the slide axis can be brought into line
                 guard slidesVertically == newPairIsHorizontal else { continue }
-                for otherRoomId in layoutRooms.keys where otherRoomId != roomId {
-                    guard let otherRoom = layoutRooms[otherRoomId] else { continue }
+                for otherRoomId in layoutSegments.keys where otherRoomId != roomId {
+                    guard let otherRoom = layoutSegments[otherRoomId] else { continue }
                     for partnerJoint in otherRoom.joints
                     where !consumedJoints.contains(partnerJoint.id) {
                         guard newJoint.matchesWith(other: partnerJoint),
@@ -102,7 +102,7 @@ extension DungeonGenerator {
                             continue
                         }
                         translateRoomsOnly([roomId], by: slide)
-                        guard let movedRoom = layoutRooms[roomId],
+                        guard let movedRoom = layoutSegments[roomId],
                               let movedJoint = movedRoom.joints.first(where: {
                                   $0.id == newJoint.id
                               }) else {

@@ -10,10 +10,10 @@ extension DungeonGenerator {
         var fillCount = 0
         for edge in groupingGraph.edges {
             let grouping = edge.grouping
-            guard let fromSegment = layoutRooms[grouping.from] else {
+            guard let fromSegment = layoutSegments[grouping.from] else {
                 throw DungeonGeneratorError.missingSegment(grouping.from)
             }
-            guard let toSegment = layoutRooms[grouping.to] else {
+            guard let toSegment = layoutSegments[grouping.to] else {
                 throw DungeonGeneratorError.missingSegment(grouping.to)
             }
             guard let fromJoint = fromSegment.joints.first(where: { $0.id == grouping.fromJoint }) else {
@@ -82,7 +82,7 @@ extension DungeonGenerator {
                 continue
             }
 
-            layoutRooms[hallway.id] = hallway
+            layoutSegments[hallway.id] = hallway
             groupingGraph.removeEdge(edge)
             createNewGrouping(
                 between: fromSegment,

@@ -3,11 +3,11 @@ import OrderedCollections
 
 extension DungeonGenerator {
       public func resolvedRects(forSegmentId segmentId: DungeonSegmentID) -> [Rect] {
-          roomIds(connectedToAndIncluding: segmentId).compactMap { layoutRooms[$0]?.rect }
+          roomIds(connectedToAndIncluding: segmentId).compactMap { layoutSegments[$0]?.rect }
       }
 
       public func containingRectForAllRooms() -> Rect? {
-          let rects = layoutRooms.values.map { $0.rect }
+          let rects = layoutSegments.values.map { $0.rect }
           guard let first = rects.first else {
               return nil
           }

@@ -18,7 +18,7 @@ extension DungeonGenerator {
                 Double.random(in: 0..<maximumRoomHeight - minimumRoomHeight, using: &randomNumberGenerator)
             ).rounded(.down)
             newRoom.rect.origin = Point(x: x, y: y)
-            layoutRooms[newRoom.id] = newRoom
+            layoutSegments[newRoom.id] = newRoom
         }
     }
  
@@ -36,9 +36,9 @@ extension DungeonGenerator {
         by delta: Point
     ) {
         for roomId in roomIds {
-            guard var room = layoutRooms[roomId] else { continue }
+            guard var room = layoutSegments[roomId] else { continue }
             room.rect = room.rect.offsetBy(delta)
-            layoutRooms[roomId] = room
+            layoutSegments[roomId] = room
         }
     }
     

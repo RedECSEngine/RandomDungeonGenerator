@@ -21,8 +21,8 @@ extension DungeonGenerator {
                 groupIndexByRoom[roomId] = index
             }
         }
-        for currentRoom in layoutRooms.values {
-            for otherRoom in layoutRooms.values {
+        for currentRoom in layoutSegments.values {
+            for otherRoom in layoutSegments.values {
                 guard currentRoom.id != otherRoom.id else { continue }
                 let currentGroup = groupIndexByRoom[currentRoom.id]
                 // When we are checking within a group we only check for direction intersections, minimum requirements can be ignored
@@ -50,14 +50,14 @@ extension DungeonGenerator {
 
     public func connectedGroups() -> [OrderedSet<DungeonSegmentID>] {
         var unionFind = UnionFind<DungeonSegmentID>()
-        for roomId in layoutRooms.keys {
+        for roomId in layoutSegments.keys {
             unionFind.addSetWith(roomId)
         }
         for edge in groupingGraph.edges {
             unionFind.unionSetsContaining(edge.from.data, and: edge.to.data)
         }
         var groupsBySet: OrderedDictionary<Int, OrderedSet<DungeonSegmentID>> = [:]
-        for roomId in layoutRooms.keys {
+        for roomId in layoutSegments.keys {
             guard let setId = unionFind.setOf(roomId) else { continue }
             groupsBySet[setId, default: []].append(roomId)
         }
@@ -74,7 +74,7 @@ extension DungeonGenerator {
 
     public func ungroupedRooms() -> [SegmentType] {
         let grouped = groupedRooms
-        return layoutRooms.values.filter { !grouped.contains($0.id) }
+        return layoutSegments.values.filter { !grouped.contains($0.id) }
     }
     
     /// The single connection a room holds, as the room's own joint and the joint it meets.
@@ -92,8 +92,8 @@ extension DungeonGenerator {
         let ownJointId = roomIsFrom ? edge.grouping.fromJoint : edge.grouping.toJoint
         let partnerJointId = roomIsFrom ? edge.grouping.toJoint : edge.grouping.fromJoint
         let partnerRoomId = roomIsFrom ? edge.to.data : edge.from.data
-        guard let room = layoutRooms[roomId],
-              let partnerRoom = layoutRooms[partnerRoomId],
+        guard let room = layoutSegments[roomId],
+              let partnerRoom = layoutSegments[partnerRoomId],
               let own = room.joints.first(where: { $0.id == ownJointId }),
               let partner = partnerRoom.joints.first(where: { $0.id == partnerJointId }) else {
             return nil

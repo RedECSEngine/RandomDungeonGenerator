@@ -1,16 +1,31 @@
 import Geometry
 import Graphs
+import OrderedCollections
 import Randomization
 
 public typealias DungeonGrid = [[Int]]
 
-public class DungeonGenerator<
-    RoomType: DungeonRoom,
-    HallwayType: DungeonHallway
-> {
+public enum DungeonGeneratorState: Int, Codable {
+    case initialState
+    case regenerateRoomsAndPositions
+    case fittingUntilNoMoreIntersections
+    case roundingRoomPositions
+    case refittingAndRounding
+    case refining
+    case addingHallways
+    case finished
+}
+
+public class DungeonGenerator<SegmentType: DungeonSegment>: Equatable {
+    public static func == (lhs: DungeonGenerator, rhs: DungeonGenerator) -> Bool {
+        return lhs === rhs
+    }
+    
+    internal var randomNumberGenerator: any RandomNumberGenerator = SystemRandomNumberGenerator()
+    
+    // MARK: Settings
     public var dungeonSize = Size(width: 64, height: 64)
     public var creationBounds = Size(width: 64, height: 64)
-
     public var minimumRoomWidth: Double = 5
     public var maximumRoomWidth: Double = 14
     public var minimumRoomHeight: Double = 5
@@ -18,319 +33,168 @@ public class DungeonGenerator<
     public var minimumRoomSpacing: Double = 2
     public var maxRoomSpacing: Double = 8
     public var hallwayWidth: Double = 4.0
-
+    
     public var initialRoomCreationCount: Int = 30
-    public var maximumStepsBeforeRetry: Int = 50
+    public var maximumStepsBeforeRetry: Int = 30
+    
+    public var segmentPool: [SegmentType]?
+    
+    public var useMinimumSpanningTreeForLayout: Bool = true
+    public internal(set) var lastSeed: UInt64 = 0
+    
+    // MARK: Intermediary State during generation
+    public internal(set) var state: DungeonGeneratorState = .initialState
+    public internal(set) var groupingGraph: AdjacencyListGraph<DungeonSegmentID, DungeonGrouping> = .init()
+    public internal(set) var layoutSegments: OrderedDictionary<DungeonSegmentID, SegmentType> = [:]
+    public internal(set) var numberOfStepsTaken = 0
+    public internal(set) var totalNumberOfStepsTakenAcrossAttempts = 0
 
-    public var randomNumberGenerator: any RandomNumberGenerator = SystemRandomNumberGenerator()
-
-    public var dungeon: Dungeon<RoomType, HallwayType>!
-
-    public var layoutRooms: [RoomType] = []
-    fileprivate var grid: [[Int]] = []
-
-    fileprivate(set) var numberOfStepsTaken = 0
-
-    public init() {}
-
-    public func runCompleteGeneration(seed: UInt64) {
-        randomNumberGenerator = SeededRandomNumberGenerator(seed: seed)
-        runCompleteGeneration()
+    public var groupings: [DungeonGrouping] {
+        groupingGraph.edges.map { $0.grouping }
     }
 
-    public func runCompleteGeneration() {
-        generateRooms()
-
-        while containsNoIntersectingRooms() == false {
-            applyFittingStep()
+    public var groupedRooms: OrderedSet<DungeonSegmentID> {
+        var rooms: OrderedSet<DungeonSegmentID> = []
+        for edge in groupingGraph.edges {
+            rooms.append(edge.from.data)
+            rooms.append(edge.to.data)
         }
-
-        roundRoomPositions()
-
-        while containsNoIntersectingRooms() == false {
-            applyFittingStep()
-            roundRoomPositions()
-        }
-
-        generateHallways()
+        return rooms
     }
 
-    public func generateRooms() {
-        numberOfStepsTaken = 0
-        layoutRooms = (0 ..< initialRoomCreationCount).map {
-            _ in
-
-            let offsetX = (dungeonSize.width - creationBounds.width) / 2
-            let offsetY = (dungeonSize.height - creationBounds.height) / 2
-
-            let x = offsetX + Double.random(in: 0..<creationBounds.width, using: &randomNumberGenerator)
-            let y = offsetY + Double.random(in: 0..<creationBounds.height, using: &randomNumberGenerator)
-            let width = (
-                minimumRoomWidth +
-                Double.random(in: 0..<maximumRoomWidth - minimumRoomWidth, using: &randomNumberGenerator)
-            ).rounded(.down)
-            let height = (
-                minimumRoomHeight +
-                Double.random(in: 0..<maximumRoomHeight - minimumRoomHeight, using: &randomNumberGenerator)
-            ).rounded(.down)
-
-            let position = Point(x: x, y: y)
-            let size = Size(width: width, height: height)
-            let rect = Rect(origin: position, size: size)
-            return RoomType(rect: rect)
+    public var connectedJoints: OrderedSet<DungeonJointID> {
+        var joints: OrderedSet<DungeonJointID> = []
+        for edge in groupingGraph.edges {
+            joints.append(edge.grouping.fromJoint)
+            joints.append(edge.grouping.toJoint)
         }
-        dungeon = nil
+        return joints
     }
-
-    public func applyFittingStep() {
-        if numberOfStepsTaken > maximumStepsBeforeRetry {
-            generateRooms()
-        }
-
-        numberOfStepsTaken += 1
-        removeRoomsOutOfBounds()
-        layoutRooms = layoutRooms.map {
-            currentRoom in
-
-            var velocityX: Double = 0
-            var velocityY: Double = 0
-            var neighborCount: Int = 0
-
-            layoutRooms.forEach {
-                otherRoom in
-
-                guard currentRoom != otherRoom else {
-                    return
-                }
-
-                let paddedRect = currentRoom.rect.inset(by: -minimumRoomSpacing)
-                guard paddedRect.intersects(otherRoom.rect) else {
-                    return
-                }
-
-                let diffPos = paddedRect.origin.diffOf(otherRoom.rect.origin)
-
-                velocityX += diffPos.x
-                velocityY += diffPos.y
-                neighborCount += 1
-            }
-
-            guard neighborCount > 0 else {
-                return currentRoom
-            }
-
-            velocityX /= Double(neighborCount)
-            velocityY /= Double(neighborCount)
-
-            velocityX = velocityX / currentRoom.rect.diagonalLength
-            velocityY = velocityY / currentRoom.rect.diagonalLength
-
-            let newX = currentRoom.rect.origin.x + velocityX
-            let newY = currentRoom.rect.origin.y + velocityY
-            let newPosition = Point(x: newX, y: newY)
-            let newRect = Rect(origin: newPosition, size: currentRoom.rect.size)
-            return RoomType(rect: newRect)
-        }
-    }
-
-    public func roundRoomPositions() {
-        layoutRooms = layoutRooms.map { room in
-            var newRoom = room
-            let newX = room.rect.origin.x.rounded(.up)
-            let newY = room.rect.origin.y.rounded(.up)
-            newRoom.rect.origin = Point(x: newX, y: newY)
-            return newRoom
-        }
-    }
-
-    public func containsNoIntersectingRooms() -> Bool {
-        for currentRoom in layoutRooms {
-            for otherRoom in layoutRooms {
-                guard currentRoom != otherRoom else {
-                    continue
-                }
-
-                let paddedRect = currentRoom.rect.inset(by: -minimumRoomSpacing)
-                if paddedRect.intersects(otherRoom.rect) {
-                    return false
-                }
-            }
-        }
-
-        return true
-    }
-
-    public func removeRoomsOutOfBounds() {
-        // inset dungeon rect to prevent rooms on edges
-        let dungeonRect = Rect(origin: Point(x: 0, y: 0), size: dungeonSize).inset(by: 1)
-        layoutRooms = layoutRooms.filter {
-            room -> Bool in
-            dungeonRect.contains(room.rect)
-        }
-    }
-
-    public func getRoomsDictionary() -> [String: RoomType] {
-        return layoutRooms.reduce([:]) {
-            dict, room -> [String: RoomType] in
-            var new = dict
-            new[room.rect.center.description] = room
-            return new
+    
+    public init(_ seed: UInt64? = nil) {
+        if let seed {
+            setSeed(seed)
+        } else {
+            setSeed(randomNumberGenerator.next()) // Pick a random number, but use our SeededNumberGenerator so it's reproducible always, if we record the seed used
         }
     }
     
-    public func generateDungeonGraph() {
-        guard dungeon == nil else { return }
-
-        let tree = minimumSpanningTreeKruskal(graph: generateUnoptimizedDungeon().graph).tree
-        dungeon = Dungeon(fromGraph: tree)
+    public func setSeed(_ seed: UInt64) {
+        lastSeed = seed
+        randomNumberGenerator = SeededRandomNumberGenerator(seed: seed)
+        reset()
     }
-
-    public func generateUnoptimizedDungeon() -> Dungeon<RoomType, HallwayType> {
-        var dungeon = Dungeon<RoomType, HallwayType>()
-        let connectableRoomRadius = (maxRoomSpacing / 2)
-        let connectedRooms = layoutRooms.reduce([:]) {
-            connections, currentRoom -> [RoomType: [RoomType]] in
-
-            var currentRoomReach = Circle(fittedTo: currentRoom.rect)
-            currentRoomReach.radius += connectableRoomRadius
-            let pairings: [RoomType] = layoutRooms.compactMap {
-                otherRoom in
-
-                guard currentRoom != otherRoom else { return nil }
-
-                var otherRoomReach = Circle(fittedTo: otherRoom.rect)
-                otherRoomReach.radius += connectableRoomRadius
-
-                if currentRoomReach.intersects(otherRoomReach) {
-                    return otherRoom
-                }
-                return nil
-            }
-
-            guard pairings.isEmpty == false else {
-                return connections
-            }
-
-            var new = connections
-            new[currentRoom] = pairings
-            return new
-        }
-
-        var finalRooms: [RoomType] = []
-        finalRooms.reserveCapacity(connectedRooms.count)
-        connectedRooms.forEach {
-            currentRoom, connectedRooms in
-
-            finalRooms.append(currentRoom)
-            let currentVertex = dungeon.graph.createVertex(currentRoom)
-            connectedRooms.forEach {
-                otherRoom in
-                let otherVertex = dungeon.graph.createVertex(otherRoom)
-                let hallway = HallwayType(points: [])
-                dungeon.graph.addEdge(currentVertex, to: otherVertex, data: hallway, withWeight: currentRoom.rect.center.distanceFrom(otherRoom.rect.center))
-            }
-        }
-        layoutRooms = finalRooms
-
-        return dungeon
+    
+    public func reset() {
+        numberOfStepsTaken = 0
+        totalNumberOfStepsTakenAcrossAttempts = 0
+        state = .initialState
+        layoutSegments = [:]
+        groupingGraph = .init()
     }
-
-    public func generateHallways() {
-        generateDungeonGraph()
-        generateLineHallways()
-        
-        dungeon.graph.adjacencyList = dungeon.graph.adjacencyList.map { edgeList in
-            var newEdgeList = edgeList
-            newEdgeList.edges = newEdgeList.edges?.map { edge in
-                var newHallway = edge.data
-                var newEdge = edge
-                
-                let lineSet = newHallway.points
-
-                guard lineSet.count >= 2 else { return edge }
-
-                let firstLine = (lineSet[0].roundedUp(), lineSet[1].roundedUp())
-                let verticalDiff = firstLine.0.diffOf(firstLine.1)
-                let verticalDirection = Direction.fromPoint(verticalDiff)
-                let roundedHalfWidth = (hallwayWidth / 2).rounded(.up)
-
-                // vertical hallways are first
-                if verticalDirection == .down {
-                    let origin = firstLine.0.offsetBy(x: -roundedHalfWidth, y: 0)
-                    let rect = Rect(origin: origin, size: Size(width: hallwayWidth, height: firstLine.0.distanceFrom(firstLine.1)))
-                    newHallway.rects.append(rect)
-                } else {
-                    let origin = firstLine.1.offsetBy(x: -roundedHalfWidth, y: 0)
-                    let rect = Rect(origin: origin, size: Size(width: hallwayWidth, height: firstLine.0.distanceFrom(firstLine.1)))
-                    newHallway.rects.append(rect)
-                }
-                
-                guard lineSet.count >= 3 else {
-                    newEdge.data = newHallway
-                    return newEdge
-                }
-
-                let secondLine = (lineSet[1].roundedUp(), lineSet[2].roundedUp())
-                let horizontalDiff = secondLine.0.diffOf(secondLine.1)
-                let horizontalDirection = Direction.fromPoint(horizontalDiff)
-
-                // horizontal comes second
-                if horizontalDirection == .left {
-                    let origin = secondLine.0.offsetBy(x: 0, y: -roundedHalfWidth)
-                    let rect = Rect(origin: origin, size: Size(width: secondLine.0.distanceFrom(secondLine.1), height: hallwayWidth))
-                    newHallway.rects.append(rect)
-                } else {
-                    let origin = secondLine.1.offsetBy(x: 0, y: -roundedHalfWidth)
-                    let rect = Rect(origin: origin, size: Size(width: secondLine.0.distanceFrom(secondLine.1), height: hallwayWidth))
-                    newHallway.rects.append(rect)
-                }
-                
-                newEdge.data = newHallway
-                
-                return newEdge
+    
+    public func nextGenerationStep() throws {
+        switch state {
+        case .initialState:
+            state = .regenerateRoomsAndPositions
+        case .regenerateRoomsAndPositions:
+            regenerateRooms()
+            randomizeRoomPositions()
+            state = .fittingUntilNoMoreIntersections
+        case .fittingUntilNoMoreIntersections:
+            guard containsNoIntersectingRooms() || connectedGroups().count == 1 else {
+                applyFittingStep()
+                return
             }
-            return edgeList
+            state = .roundingRoomPositions
+        case .roundingRoomPositions:
+            roundRoomPositions()
+            state = .refittingAndRounding
+        case .refittingAndRounding:
+            guard containsNoIntersectingRooms() || connectedGroups().count == 1 else {
+                applyFittingStep()
+                roundRoomPositions()
+                return
+            }
+            if connectedGroups().count != 1 {
+                let groupingsCount = groupingGraph.edges.count
+                identifyConnections()
+                if groupingsCount != groupingGraph.edges.count {
+                    state = .fittingUntilNoMoreIntersections
+                    return
+                }
+            }
+            // reevaluate connected groups count again
+            if connectedGroups().count != 1 {
+                for room in ungroupedRooms() {
+                    if findConnection(for: room, ignoringJointAlignment: true) {
+                        state = .fittingUntilNoMoreIntersections
+                        return
+                    }
+                }
+            }
+            
+            // reevaluate connected groups count agai
+            if connectedGroups().count != 1 {
+                for group in connectedGroups() {
+                    if findConnection(for: group, ignoringJointAlignment: true) {
+                        state = .fittingUntilNoMoreIntersections
+                        return
+                    }
+                }
+            }
+           
+            centerAllRoomsInDungeon()
+
+            state = .refining
+        case .refining:
+            addSingleLoopConnection()
+            state = .addingHallways
+        case .addingHallways:
+            try fillInHallways()
+            state = .finished
+        case .finished:
+            break
         }
     }
+    
+    public func runCompleteGeneration(withSegmentPool segmentPool: [SegmentType]? = nil) throws {
+        if let segmentPool {
+            self.segmentPool = segmentPool
+        }
 
-    public func generateLineHallways() {
-        dungeon.graph.adjacencyList = dungeon.graph.adjacencyList.map { edgeList in
-            var newEdgeList = edgeList
-            newEdgeList.edges = newEdgeList.edges?.map { edge in
-                var newEdge = edge
-                
-                let fromRoom = edge.from.data
-                let toRoom = edge.to.data
+        reset()
 
-                let lineOrigin = fromRoom.rect.center
-                newEdge.data.points.append(lineOrigin)
-
-                let positionDiff = toRoom.rect.center.diffOf(lineOrigin)
-                let verticalLinePoint = lineOrigin.offsetBy(Point(x: 0, y: positionDiff.y))
-                newEdge.data.points.append(verticalLinePoint)
-
-                if toRoom.rect.intersects(line: (lineOrigin, verticalLinePoint)) {
-                    return newEdge
-                }
-
-                let horizontalLinePoint = verticalLinePoint.offsetBy(Point(x: positionDiff.x, y: 0))
-                newEdge.data.points.append(horizontalLinePoint)
-                
-                return newEdge
-            }
-            return newEdgeList
+        while state != .finished {
+            try nextGenerationStep()
         }
     }
-
-    public func to2DGrid() -> [[Int]] {
-        guard self.grid.isEmpty else {
-            return self.grid
+    
+    // MARK: - Dungeon Prep
+    
+    public func regenerateRooms() {
+        layoutSegments = [:]
+        if let segmentPool {
+            segmentPool
+                .filter { $0.layoutCategory == .room }
+                .forEach { room in
+                    layoutSegments[room.id] = room
+                }
+        } else {
+            for index in (0 ..< initialRoomCreationCount) {
+                let width = (
+                    minimumRoomWidth +
+                    Double.random(in: 0..<maximumRoomWidth - minimumRoomWidth, using: &randomNumberGenerator)
+                ).rounded(.down)
+                let height = (
+                    minimumRoomHeight +
+                    Double.random(in: 0..<maximumRoomHeight - minimumRoomHeight, using: &randomNumberGenerator)
+                ).rounded(.down)
+                let size = Size(width: width, height: height)
+                let rect = Rect(origin: .zero, size: size)
+                let room = SegmentType(id: "room-\(index)", rect: rect, layoutCategory: .room)
+                layoutSegments[room.id] = room
+            }
         }
-        
-        let grid = dungeon.create2DGrid(size: dungeonSize)
-        
-        self.grid = grid
-
-        return self.grid
     }
 }

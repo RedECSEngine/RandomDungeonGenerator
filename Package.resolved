@@ -1,43 +1,41 @@
 {
-  "object": {
-    "pins": [
-      {
-        "package": "Geometry",
-        "repositoryURL": "https://github.com/RedECSEngine/Geometry.git",
-        "state": {
-          "branch": null,
-          "revision": "90247082d2e42f726a6e6a17a877b3ad9a059629",
-          "version": "0.0.5"
-        }
-      },
-      {
-        "package": "Graphs",
-        "repositoryURL": "https://github.com/RedECSEngine/Graphs.git",
-        "state": {
-          "branch": null,
-          "revision": "296932aeeea06e5321a8e6e85d935e2ea9544704",
-          "version": "0.0.1"
-        }
-      },
-      {
-        "package": "swift-numerics",
-        "repositoryURL": "https://github.com/apple/swift-numerics.git",
-        "state": {
-          "branch": null,
-          "revision": "0c0290ff6b24942dadb83a929ffaaa1481df04a2",
-          "version": "1.1.1"
-        }
-      },
-      {
-        "package": "SwiftFormat",
-        "repositoryURL": "https://github.com/nicklockwood/SwiftFormat.git",
-        "state": {
-          "branch": null,
-          "revision": "d02a0f61af57e88c65813cc1f6509ce69e1612bf",
-          "version": "0.48.3"
-        }
+  "pins" : [
+    {
+      "identity" : "randomization",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/RedECSEngine/Randomization.git",
+      "state" : {
+        "revision" : "73b2bba60187e8c983458db889657234d610e17a",
+        "version" : "0.0.1"
       }
-    ]
-  },
-  "version": 1
+    },
+    {
+      "identity" : "swift-collections",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-collections.git",
+      "state" : {
+        "revision" : "a0cb0954ecb21e4e31b0070e6ed5674e8556685a",
+        "version" : "1.6.0"
+      }
+    },
+    {
+      "identity" : "swift-numerics",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-numerics.git",
+      "state" : {
+        "revision" : "0c0290ff6b24942dadb83a929ffaaa1481df04a2",
+        "version" : "1.1.1"
+      }
+    },
+    {
+      "identity" : "swiftformat",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/nicklockwood/SwiftFormat.git",
+      "state" : {
+        "revision" : "d02a0f61af57e88c65813cc1f6509ce69e1612bf",
+        "version" : "0.48.3"
+      }
+    }
+  ],
+  "version" : 2
 }

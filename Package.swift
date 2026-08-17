@@ -19,9 +19,21 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/nicklockwood/SwiftFormat.git", from: "0.47.7"),
-        .package(url: "https://github.com/RedECSEngine/Geometry.git", from: "0.0.5"),
-        .package(url: "https://github.com/RedECSEngine/Graphs.git", from: "0.0.1"),
-        .package(url: "https://github.com/RedECSEngine/Randomization.git", exact: "0.0.1")
+        
+        
+//        .package(url: "https://github.com/RedECSEngine/Geometry.git", from: "0.0.5"),
+        .package(path: "../Geometry"),
+
+//        .package(url: "https://github.com/RedECSEngine/Graphs.git", from: "0.0.1"),
+        .package(path: "../swift-graphs"),
+        
+        .package(url: "https://github.com/RedECSEngine/Randomization.git", exact: "0.0.1"),
+        
+        .package(
+            url: "https://github.com/apple/swift-collections.git",
+            from: "1.1.0"
+        ),
+
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -30,8 +42,9 @@ let package = Package(
             name: "RandomDungeonGenerator",
             dependencies: [
                 "Geometry",
-                .product(name: "Graphs", package: "Graphs"),
-                .product(name: "Randomization", package: "Randomization")
+                .product(name: "Graphs", package: "swift-graphs"),
+                .product(name: "Randomization", package: "Randomization"),
+                .product(name: "OrderedCollections", package: "swift-collections"),
             ]
         ),
         .testTarget(
